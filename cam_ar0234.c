@@ -115,11 +115,22 @@ static void gs_ar0234_power(struct gs_ar0234_dev *sensor, int enable)
 
 static int gs_ar0234_s_power(struct v4l2_subdev *sd, int on)
 {
+	int ret=0;
 	struct gs_ar0234_dev *sensor = to_gs_ar0234_dev(sd);
+	dev_dbg(sensor->dev, "%s: %d\n", __func__, on);
 	mutex_lock(&sensor->lock);
-	//////////////////////////////////gs_ar0234_power(sensor, on);
+	if(on) 
+	{
+		ret = gs_ar0234_write_reg8(sensor, GS_REG_POWER, GS_POWER_UP);
+		// wait for camera to boot up
+		msleep(2000);
+	}
+	else 
+	{
+		ret = gs_ar0234_write_reg8(sensor, GS_REG_POWER, GS_POWER_DOWN);
+	}
 	mutex_unlock(&sensor->lock);
-	return 0;
+	return ret;
 }
 
 static int ops_get_fmt(struct v4l2_subdev *sub_dev, struct v4l2_subdev_state *sd_state, struct v4l2_subdev_format *format)
@@ -1560,9 +1571,6 @@ static int gs_ar0234_probe(struct i2c_client *client)
 	if (ret)
 		goto entity_cleanup;
 
-	//turn off
-	///////////////////////////////gs_ar0234_power(sensor, 0);
-
 	ret = v4l2_async_register_subdev_sensor(&sensor->sd);
 	if (ret)
 		goto entity_cleanup;
@@ -1573,11 +1581,15 @@ static int gs_ar0234_probe(struct i2c_client *client)
 	if (ret)
 		goto entity_cleanup;
 
+	// Power down
+	ret = gs_ar0234_write_reg8(sensor, GS_REG_POWER, GS_POWER_DOWN);
+	if (ret)
+		goto entity_cleanup;
 
 	pr_debug("<--%s gs_ar0234 Probe end successful, return\n",__func__);
 	return 0;
 
-
+	/* weird code, never gets here */
 	ret = v4l2_async_register_subdev_sensor(&sensor->sd);
 	if (ret)
 		goto free_ctrls;
