@@ -21,6 +21,35 @@ int gs_ar0234_i2c_trx_retry(struct i2c_adapter *adap, struct i2c_msg *msgs, int 
 	// return 0;
 }
 
+int gs_ar0234_check8(struct gs_ar0234_dev *sensor)
+{
+	struct i2c_client *client = sensor->i2c_client;
+	struct i2c_msg msg[2];
+	u8 buf[2];
+	int ret;
+
+	buf[0] = 0x31;
+	buf[1] = 0x00;
+
+	msg[0].addr = client->addr;
+	msg[0].flags = client->flags;
+	msg[0].buf = buf;
+	msg[0].len = sizeof(buf);
+
+	msg[1].addr = client->addr;
+	msg[1].flags = client->flags | I2C_M_RD;
+	msg[1].buf = buf;
+	msg[1].len = 1;
+
+	ret = i2c_transfer(client->adapter, msg, 2);
+
+	if (ret < 0) {
+		//dev_err(&client->dev, "%s: poll8 \n", __func__);
+		return -1;
+	}
+	return 0;
+}
+
 int gs_ar0234_read_reg8(struct gs_ar0234_dev *sensor, u8 addr, u8 *val)
 {
 	struct i2c_client *client = sensor->i2c_client;
@@ -190,6 +219,34 @@ int gs_ar0234_write_reg32(struct gs_ar0234_dev *sensor, u8 addr, u32 val)
 	return 0;
 }
 
-
+int gs_ar0234_power(struct gs_ar0234_dev *sensor, int on)
+{
+	int ret;
+	int timeout = 0; 
+	if(on) 
+	{
+		ret = gs_ar0234_write_reg8(sensor, GS_REG_POWER, 0); //power up
+		if(ret) return ret;
+	
+		// wait for camera to boot up and accept i2c commands
+		msleep(100); // wait a bit for camera to start
+		//msleep(2000);
+		while(timeout < 5000) // 5 seconds 
+		{
+			if (gs_ar0234_check8(sensor) < 0  ) // check if I2C is fail 
+			{
+				timeout += 250; // in steps of 250 ms
+				msleep(250);
+			}
+			else break; //exit
+		}
+	}
+	else 
+	{
+		ret = gs_ar0234_write_reg8(sensor, GS_REG_POWER, 1); // power down
+	}
+	// pr_debug("<--%s:  timeout  = %d,  %d\n",__func__, timeout, on);
+	return ret;
+}
 
 

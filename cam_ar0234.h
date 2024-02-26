@@ -18,6 +18,9 @@
 #define PAD_SOURCE			1
 #define NUM_PADS			1
 
+#define GS_POWER_UP 		1
+#define GS_POWER_DOWN 		0
+
 
 #define V4L2_CID_CAMERA_CAM_AR0234 	(V4L2_CID_CAMERA_CLASS_BASE+50) 		//camera controls for CAM_AR0234
 #define V4L2_CID_USER_CAM_AR0234 	(V4L2_CID_USER_BASE+2000) 				//user controls for CAM_AR0234
@@ -86,6 +89,7 @@ enum commands {
 };
 
 enum regs {
+	GS_REG_DUMMY					= 0x00,
 	GS_REG_BRIGHTNESS     			= 0x02,
 	GS_REG_CONTRAST       			= 0x04,
 	GS_REG_SATURATION     			= 0x06,
@@ -128,6 +132,7 @@ enum regs {
 	GS_REG_FACE_MIN_SIZE  			= 0x86,
 	GS_REG_FACE_MAX_SIZE    		= 0x88,
 	GS_REG_TESTPATTERN 				= 0xE0,
+	GS_REG_POWER                    = 0xE7,
 	GS_REG_SAVE_RESTART				= 0xF0,
 };
 
