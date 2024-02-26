@@ -119,16 +119,7 @@ static int gs_ar0234_s_power(struct v4l2_subdev *sd, int on)
 	struct gs_ar0234_dev *sensor = to_gs_ar0234_dev(sd);
 	dev_dbg(sensor->dev, "%s: %d\n", __func__, on);
 	mutex_lock(&sensor->lock);
-	if(on) 
-	{
-		ret = gs_ar0234_write_reg8(sensor, GS_REG_POWER, GS_POWER_UP);
-		// wait for camera to boot up
-		msleep(2000);
-	}
-	else 
-	{
-		ret = gs_ar0234_write_reg8(sensor, GS_REG_POWER, GS_POWER_DOWN);
-	}
+	ret = gs_ar0234_power(sensor, on);
 	mutex_unlock(&sensor->lock);
 	return ret;
 }
@@ -1567,6 +1558,11 @@ static int gs_ar0234_probe(struct i2c_client *client)
 
 	mutex_init(&sensor->lock);
 
+	// Power Up
+	ret = gs_ar0234_power(sensor, GS_POWER_UP);
+	if (ret)
+		goto entity_cleanup;
+
 	ret = gs_ar0234_init_controls(sensor);
 	if (ret)
 		goto entity_cleanup;
@@ -1575,14 +1571,13 @@ static int gs_ar0234_probe(struct i2c_client *client)
 	if (ret)
 		goto entity_cleanup;
 
-
 	// read register values from Sensor
 	ret = gs_ar0234_i_cntrl(sensor);
 	if (ret)
 		goto entity_cleanup;
 
 	// Power down
-	ret = gs_ar0234_write_reg8(sensor, GS_REG_POWER, GS_POWER_DOWN);
+	ret = gs_ar0234_s_power(&sensor->sd, GS_POWER_DOWN);
 	if (ret)
 		goto entity_cleanup;
 
