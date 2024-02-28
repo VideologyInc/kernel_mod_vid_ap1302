@@ -1,15 +1,11 @@
 #!/usr/bin/env python3
 
+from periphery import I2C
 import os, sys, struct
 from time import sleep
 import gsi2c
 import argparse
 
-
-parser = argparse.ArgumentParser(description="Update mainapp img file",prog="flashapp")
-parser.add_argument('-f', dest='filename', metavar='filename',  required=True, help='Image filename')
-parser.add_argument('-p',  dest='password', metavar='password', type=lambda x: int(x,0), default=0, help='set password')
-args = parser.parse_args()
 
 def percprint(start,appsize,current):
 	perc = round(100*(current-start)/appsize)
@@ -45,6 +41,21 @@ startaddress = 0x1A00 # start address of mainapp
 
 
 def main():
+    parser = argparse.ArgumentParser(description="Update mainapp img file",prog="flashapp")
+    parser.add_argument('-f', dest='filename', metavar='filename',  required=True, help='Image filename')
+    parser.add_argument('-p',  dest='password', metavar='password', type=lambda x: int(x,0), default=0, help='set password')
+    parser.add_argument('-i', dest='iic', metavar='iic',type=int, default=0, help='i2c bus 0 or 1')
+    args = parser.parse_args()
+
+    if args.iic == 0:
+        gsi2c.i2c = I2C("/dev/links/csi0_i2c")
+    elif args.iic == 1:
+        gsi2c.i2c = I2C("/dev/links/csi1_i2c")
+    else:
+        print("wrong i2c bus!\n")
+        return
+
+
     readfile(args.filename)
     gsi2c.set_password(args.password) # set the password to update
     sleep(1) 
