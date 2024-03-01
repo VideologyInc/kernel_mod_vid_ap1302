@@ -16,7 +16,7 @@ def main():
     gsi2c.write32(0x64,round(256 * 1000_000 / Decimal(args.fps))) # set fps in microseconds
     print("%8X"%round(256 * 1000_000 / Decimal(args.fps)))
 
-    print("%3.2f fps (%d us)\n"%(Decimal(args.fps),round(1000_000 / Decimal(args.fps))))
+    print("%3.2f fps (%7.2f us)\n"%(Decimal(args.fps),(1000_000 / Decimal(args.fps))))
 
     if args.config == True: 
         gsi2c.i2c = I2C("/dev/links/csi0_i2c")

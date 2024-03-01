@@ -60,7 +60,7 @@ static struct resolution sensor_res_list[] = {
 	{.width = 1024, .height = 1024, .framerate = 30, .frame_format_code = 11, .name="1024x1024@30" },
 	{.width = 1024, .height = 1024, .framerate = 50, .frame_format_code = 11, .name="1024x1024@50" },
 	{.width = 1024, .height = 1024, .framerate = 60, .frame_format_code = 11, .name="1024x1024@60" },
-	
+
 	{.width = 1280, .height = 1024, .framerate = 25, .frame_format_code = 7, .name="1280x1024@25" },
 	{.width = 1280, .height = 1024, .framerate = 30, .frame_format_code = 7, .name="1280x1024@30" },
 	{.width = 1280, .height = 1024, .framerate = 50, .frame_format_code = 7, .name="1280x1024@50" },
@@ -78,6 +78,7 @@ static inline struct v4l2_subdev *ctrl_to_sd(struct v4l2_ctrl *ctrl)
 			     ctrls.handler)->sd;
 }
 
+#if  0
 // FIXME: implement everything in kernel I2C commands
 //static char upcall_string[512];
 static int gs_ar0234_upcall(struct gs_ar0234_dev *sensor, char *call_str)
@@ -99,6 +100,7 @@ static int gs_ar0234_upcall(struct gs_ar0234_dev *sensor, char *call_str)
 	// call_usermodehelper(argv[0], argv, envp, UMH_WAIT_EXEC);
 	return 0;
 }
+#endif
 
 #if 0
 static void gs_ar0234_power(struct gs_ar0234_dev *sensor, int enable)
@@ -189,7 +191,7 @@ static int gs_ar0234_set_fmt(struct v4l2_subdev *sd, struct v4l2_subdev_state *s
 	// if ((new_mode != sensor->mode) && (format->which != V4L2_SUBDEV_FORMAT_TRY)) {
 	sensor->mode = new_mode;
 	// snprintf(upcall_string, sizeof(upcall_string), "0x%02x", resolution);
-	ret |= gs_ar0234_upcall(sensor, new_mode->name);
+	//ret |= gs_ar0234_upcall(sensor, new_mode->name);
 
 	pr_debug("%s: sensor->ep.bus_type =%d\n", __func__, sensor->ep.bus_type);
 	pr_debug("%s: sensor->ep.bus      =%p\n", __func__, &sensor->ep.bus);
@@ -216,7 +218,7 @@ static int gs_ar0234_g_volatile_ctrl(struct v4l2_ctrl *ctrl)
 				return ret;
 			sensor->ctrls.brightness->val = shortval;
 			break;
-			
+
 		default:
 			ret = -EINVAL;
 	}
@@ -276,7 +278,7 @@ static int gs_ar0234_s_ctrl(struct v4l2_ctrl *ctrl)
 		}
 		ret = gs_ar0234_write_reg16(sensor, GS_REG_WB_TEMPERATURE, val);
 		dev_dbg_ratelimited(sd->dev, "%s: set white balance temperature to %d K\n", __func__, val);
-		break;	
+		break;
 	case V4L2_CID_RED_BALANCE: // Red gain in manual WB
 		break;
 	case V4L2_CID_BLUE_BALANCE: // Blue gain in manual WB
@@ -300,7 +302,7 @@ static int gs_ar0234_s_ctrl(struct v4l2_ctrl *ctrl)
 				val8 = 0xC; //  For now use same as Auto
 				break;
 			default:
-				val8 = 0xFF; // ignore for others	
+				val8 = 0xFF; // ignore for others
 				break;
 		}
 		if(val8 < 0xFF) 	{
@@ -314,13 +316,13 @@ static int gs_ar0234_s_ctrl(struct v4l2_ctrl *ctrl)
 		dev_dbg_ratelimited(sd->dev, "%s: set exposure to %d us\n", __func__, val);
 		break;
 	case V4L2_CID_EXPOSURE : // for now use to adjust reference or target level
-		val = ctrl->val; 
+		val = ctrl->val;
 		//need to convert val to format s7.8
 		tmp = (u16) (val * 256 / 1000);  // reverse = val * 1000 / 256
 		tmp = val < 0 ? tmp - ((val%1000) > -500 ? 0 : 1) : tmp + ((val%1000) < 500 ? 0 : 1); // rounding
 		ret = gs_ar0234_write_reg16(sensor, GS_REG_AE_TARGET, tmp);
 		dev_dbg_ratelimited(sd->dev, "%s: set autoe exposure target to 0x%04X\n", __func__, tmp);
-		break;	
+		break;
 	case V4L2_CID_EXPOSURE_UPPER:
 		val = ctrl->val * 100;
 		ret = gs_ar0234_write_reg32(sensor, GS_REG_EXPOSURE_UPPER, val);
@@ -330,21 +332,21 @@ static int gs_ar0234_s_ctrl(struct v4l2_ctrl *ctrl)
 		val = ctrl->val * 100;
 		ret = gs_ar0234_write_reg32(sensor, GS_REG_EXPOSURE_MAX, val);
 		dev_dbg_ratelimited(sd->dev, "%s: set exposure max to %d us\n", __func__, val);
-		break;	
+		break;
 	case V4L2_CID_GAIN_UPPER:
 		ret = gs_ar0234_write_reg16(sensor, GS_REG_GAIN_UPPER, ctrl->val);
 		dev_dbg_ratelimited(sd->dev, "%s: set gain upper to %d \n", __func__, ctrl->val);
-		break;	
+		break;
 	case V4L2_CID_GAIN_MAX:
 		ret = gs_ar0234_write_reg16(sensor, GS_REG_GAIN_MAX, ctrl->val);
 		dev_dbg_ratelimited(sd->dev, "%s: set gain max to %d \n", __func__, ctrl->val);
-		break;	
+		break;
 	case V4L2_CID_GAIN: // gain level
 		ret = gs_ar0234_write_reg16(sensor, GS_REG_GAIN, ctrl->val);
 		dev_dbg_ratelimited(sd->dev, "%s: set gain to %d\n", __func__, ctrl->val);
 		break;
 	case V4L2_CID_AUTOGAIN: //  ??????<tbd>
-		break;	
+		break;
 	case V4L2_CID_AUTOBRIGHTNESS: //  ?????? <tbd>
 		break;
 	case V4L2_CID_ISO_SENSITIVITY: //  ?????? <tbd>
@@ -369,73 +371,73 @@ static int gs_ar0234_s_ctrl(struct v4l2_ctrl *ctrl)
 	case V4L2_CID_BLC_WINDOW_X0:
 		ret = gs_ar0234_write_reg8(sensor, GS_REG_BLC_WINDOW_X0, ctrl->val);
 		dev_dbg_ratelimited(sd->dev, "%s: set blc window x0 to %d\n", __func__, ctrl->val);
-		break;	
+		break;
 	case V4L2_CID_BLC_WINDOW_Y0:
 		ret = gs_ar0234_write_reg8(sensor, GS_REG_BLC_WINDOW_Y0, ctrl->val);
-		dev_dbg_ratelimited(sd->dev, "%s: set blc window y0 to %d\n", __func__, ctrl->val);	
-		break;	
+		dev_dbg_ratelimited(sd->dev, "%s: set blc window y0 to %d\n", __func__, ctrl->val);
+		break;
 	case V4L2_CID_BLC_WINDOW_X1:
 		ret = gs_ar0234_write_reg8(sensor, GS_REG_BLC_WINDOW_X1, ctrl->val);
-		dev_dbg_ratelimited(sd->dev, "%s: set blc window x1 to %d\n", __func__, ctrl->val);	
-		break;	
+		dev_dbg_ratelimited(sd->dev, "%s: set blc window x1 to %d\n", __func__, ctrl->val);
+		break;
 	case V4L2_CID_BLC_WINDOW_Y1:
 		ret = gs_ar0234_write_reg8(sensor, GS_REG_BLC_WINDOW_Y1, ctrl->val);
-		dev_dbg_ratelimited(sd->dev, "%s: set blc window y1 to %d\n", __func__, ctrl->val);	
-		break;		
+		dev_dbg_ratelimited(sd->dev, "%s: set blc window y1 to %d\n", __func__, ctrl->val);
+		break;
 	case V4L2_CID_BLC_RATIO:
 		ret = gs_ar0234_write_reg8(sensor, GS_REG_BLC_RATIO, ctrl->val);
-		dev_dbg_ratelimited(sd->dev, "%s: set blc ratio to %d\n", __func__, ctrl->val);	
-		break;	
+		dev_dbg_ratelimited(sd->dev, "%s: set blc ratio to %d\n", __func__, ctrl->val);
+		break;
 	case V4L2_CID_BLC_FACE_LEVEL:
 		ret = gs_ar0234_write_reg8(sensor, GS_REG_BLC_FACE_LEVEL, ctrl->val);
-		dev_dbg_ratelimited(sd->dev, "%s: set blc face level to %d\n", __func__, ctrl->val);	
-		break;	
+		dev_dbg_ratelimited(sd->dev, "%s: set blc face level to %d\n", __func__, ctrl->val);
+		break;
 	case V4L2_CID_BLC_FACE_WEIGHT:
 		ret = gs_ar0234_write_reg8(sensor, GS_REG_BLC_FACE_WEIGHT, ctrl->val);
-		dev_dbg_ratelimited(sd->dev, "%s: set blc face weight to %d\n", __func__, ctrl->val);	
-		break;	
+		dev_dbg_ratelimited(sd->dev, "%s: set blc face weight to %d\n", __func__, ctrl->val);
+		break;
 	case V4L2_CID_BLC_ROI_LEVEL:
 		ret = gs_ar0234_write_reg8(sensor, GS_REG_BLC_ROI_LEVEL, ctrl->val);
-		dev_dbg_ratelimited(sd->dev, "%s: set blc roi level to %d\n", __func__, ctrl->val);	
-		break;	
+		dev_dbg_ratelimited(sd->dev, "%s: set blc roi level to %d\n", __func__, ctrl->val);
+		break;
 	case V4L2_CID_FACE_DETECT_0:
-		ret = gs_ar0234_read_reg8(sensor, GS_REG_FACE_DETECT, &val8); 
+		ret = gs_ar0234_read_reg8(sensor, GS_REG_FACE_DETECT, &val8);
 		if(ret) break;
 		ret = gs_ar0234_write_reg8(sensor, GS_REG_FACE_DETECT, (val8 & (~(1<<0))) | ctrl->val<<0);
-		dev_dbg_ratelimited(sd->dev, "%s: set face detect b0 to %d\n", __func__, ctrl->val);	
+		dev_dbg_ratelimited(sd->dev, "%s: set face detect b0 to %d\n", __func__, ctrl->val);
 		break;
 	case V4L2_CID_FACE_DETECT_4:
-		ret = gs_ar0234_read_reg8(sensor, GS_REG_FACE_DETECT, &val8); 
+		ret = gs_ar0234_read_reg8(sensor, GS_REG_FACE_DETECT, &val8);
 		if(ret) break;
 		ret = gs_ar0234_write_reg8(sensor, GS_REG_FACE_DETECT, (val8 & (~(1<<4))) | ctrl->val<<4);
-		dev_dbg_ratelimited(sd->dev, "%s: set face detect b4 to %d\n", __func__, ctrl->val);	
+		dev_dbg_ratelimited(sd->dev, "%s: set face detect b4 to %d\n", __func__, ctrl->val);
 		break;
 	case V4L2_CID_FACE_DETECT_5:
-		ret = gs_ar0234_read_reg8(sensor, GS_REG_FACE_DETECT, &val8); 
+		ret = gs_ar0234_read_reg8(sensor, GS_REG_FACE_DETECT, &val8);
 		if(ret) break;
 		ret = gs_ar0234_write_reg8(sensor, GS_REG_FACE_DETECT, (val8 & (~(1<<5))) | ctrl->val<<5);
-		dev_dbg_ratelimited(sd->dev, "%s: set face detect b5 to %d\n", __func__, ctrl->val);	
-		break;				
+		dev_dbg_ratelimited(sd->dev, "%s: set face detect b5 to %d\n", __func__, ctrl->val);
+		break;
 	case V4L2_CID_FACE_DETECT_SPEED:
 		ret = gs_ar0234_write_reg8(sensor, GS_REG_FACE_DETECT_SPEED, ctrl->val);
-		dev_dbg_ratelimited(sd->dev, "%s: set face detect speed to %d\n", __func__, ctrl->val);	
-		break;		
+		dev_dbg_ratelimited(sd->dev, "%s: set face detect speed to %d\n", __func__, ctrl->val);
+		break;
 	case V4L2_CID_FACE_DETECT_THRESHOLD:
 		ret = gs_ar0234_write_reg8(sensor, GS_REG_FACE_DETECT_THRESHOLD, ctrl->val);
-		dev_dbg_ratelimited(sd->dev, "%s: set face detect threshold to %d\n", __func__, ctrl->val);	
-		break;	
+		dev_dbg_ratelimited(sd->dev, "%s: set face detect threshold to %d\n", __func__, ctrl->val);
+		break;
 	case V4L2_CID_FACE_CHROMA_THRESHOLD:
 		ret = gs_ar0234_write_reg8(sensor, GS_REG_FACE_CHROMA_THRESHOLD, ctrl->val);
-		dev_dbg_ratelimited(sd->dev, "%s: set face chroma threshold to %d\n", __func__, ctrl->val);	
-		break;	
+		dev_dbg_ratelimited(sd->dev, "%s: set face chroma threshold to %d\n", __func__, ctrl->val);
+		break;
 	case V4L2_CID_FACE_MIN_SIZE:
 		ret = gs_ar0234_write_reg16(sensor, GS_REG_FACE_MIN_SIZE, ctrl->val);
-		dev_dbg_ratelimited(sd->dev, "%s: set face min size to %d\n", __func__, ctrl->val);	
-		break;	
+		dev_dbg_ratelimited(sd->dev, "%s: set face min size to %d\n", __func__, ctrl->val);
+		break;
 	case V4L2_CID_FACE_MAX_SIZE:
 		ret = gs_ar0234_write_reg16(sensor, GS_REG_FACE_MAX_SIZE, ctrl->val);
-		dev_dbg_ratelimited(sd->dev, "%s: set face max size to %d\n", __func__, ctrl->val);	
-		break;											
+		dev_dbg_ratelimited(sd->dev, "%s: set face max size to %d\n", __func__, ctrl->val);
+		break;
 	case V4L2_CID_POWER_LINE_FREQUENCY:
 		ret = gs_ar0234_read_reg8(sensor, GS_REG_ANTIFLICKER_MODE, &val8); // set power line frequency
 		if(ret) break;
@@ -485,7 +487,7 @@ static int gs_ar0234_s_ctrl(struct v4l2_ctrl *ctrl)
 			case V4L2_COLORFX_SKETCH: 		val8=0x0F; break;
 			case V4L2_COLORFX_SKY_BLUE: 	val8=0x08; break;
 			case V4L2_COLORFX_GRASS_GREEN: 	val8=0x09; break;
-			case V4L2_COLORFX_SKIN_WHITEN: 	val8=0x00; break; //? 
+			case V4L2_COLORFX_SKIN_WHITEN: 	val8=0x00; break; //?
 			case V4L2_COLORFX_VIVID: 		val8=0x00; break; // ?
 			case V4L2_COLORFX_AQUA: 		val8=0x00; break; // ?
 			case V4L2_COLORFX_ART_FREEZE: 	val8=0x11; break; // foggy
@@ -501,7 +503,7 @@ static int gs_ar0234_s_ctrl(struct v4l2_ctrl *ctrl)
 	case V4L2_CID_TEST_PATTERN:
 		ret = gs_ar0234_write_reg8(sensor, GS_REG_TESTPATTERN, ctrl->val);
 		dev_dbg_ratelimited(sd->dev, "%s: set testpattern %d\n", __func__, ctrl->val);
-		break;	
+		break;
 	case V4L2_CID_PAN_ABSOLUTE:
 		ret = gs_ar0234_write_reg8(sensor, GS_REG_PAN, ctrl->val);
 		dev_dbg_ratelimited(sd->dev, "%s: set pan to %d\n", __func__, ctrl->val);
@@ -514,14 +516,14 @@ static int gs_ar0234_s_ctrl(struct v4l2_ctrl *ctrl)
 		ret = gs_ar0234_write_reg16(sensor, GS_REG_ZOOM, ctrl->val);
 		dev_dbg_ratelimited(sd->dev, "%s: set zoom to %d\n", __func__, ctrl->val);
 		break;
-	case V4L2_CID_ZOOM_SPEED: 
+	case V4L2_CID_ZOOM_SPEED:
 		ret = gs_ar0234_write_reg8(sensor, GS_REG_ZOOM_SPEED, ctrl->val);
 		dev_dbg_ratelimited(sd->dev, "%s: set zoom speed to %d\n", __func__, ctrl->val);
 		break;
 	case V4L2_CID_NOISE_RED:
 		ret = gs_ar0234_write_reg16(sensor, GS_REG_NOISE_RED, ctrl->val);
 		dev_dbg_ratelimited(sd->dev, "%s: set noise reduction to %d\n", __func__, ctrl->val);
-		break;	
+		break;
 	case V4L2_CID_ROI_MODE_0:
 	  	ret = gs_ar0234_read_reg8(sensor, GS_REG_ROI_MODE, &val8); // set power line frequency
 		if(ret) break;
@@ -533,25 +535,25 @@ static int gs_ar0234_s_ctrl(struct v4l2_ctrl *ctrl)
 		if(ret) break;
 		ret = gs_ar0234_write_reg8(sensor, GS_REG_ROI_MODE, (val8 & (~(1<<1))) | ctrl->val<<1);
 		dev_dbg_ratelimited(sd->dev, "%s: set roi mode b1 to %d\n", __func__, ctrl->val);
-		break;	
+		break;
 	case V4L2_CID_ROI_MODE_2:
 	  	ret = gs_ar0234_read_reg8(sensor, GS_REG_ROI_MODE, &val8); // set power line frequency
 		if(ret) break;
 		ret = gs_ar0234_write_reg8(sensor, GS_REG_ROI_MODE, (val8 & (~(1<<2))) | ctrl->val<<2);
 		dev_dbg_ratelimited(sd->dev, "%s: set roi mode b2 to %d\n", __func__, ctrl->val);
-		break;	
-	case V4L2_CID_STORE_REGISTERS: 
+		break;
+	case V4L2_CID_STORE_REGISTERS:
 		ret = gs_ar0234_write_reg8(sensor, GS_REG_SAVE_RESTART, 0x01);
 		dev_dbg_ratelimited(sd->dev, "%s: set store registers\n", __func__);
-		break;	
-	case V4L2_CID_RESTORE_REGISTERS: 
+		break;
+	case V4L2_CID_RESTORE_REGISTERS:
 		ret = gs_ar0234_write_reg8(sensor, GS_REG_SAVE_RESTART, 0x05);
 		if(ret) break;
 		msleep(5); //wait 5 ms for recovery of factory registers
 		dev_dbg_ratelimited(sd->dev, "%s: set restore registers\n", __func__);
 		ret = gs_ar0234_i_cntrl(sensor);
-		break;	
-	case V4L2_CID_RESTORE_FACTORY: 
+		break;
+	case V4L2_CID_RESTORE_FACTORY:
 		ret = gs_ar0234_write_reg8(sensor, GS_REG_SAVE_RESTART, 0x07);
 		if(ret) break;
 		msleep(10); //wait 5 ms for recovery of factory registers
@@ -560,11 +562,11 @@ static int gs_ar0234_s_ctrl(struct v4l2_ctrl *ctrl)
 		msleep(10); //wait 5 ms for recovery of factory registers
 		dev_dbg_ratelimited(sd->dev, "%s: set restore factory\n", __func__);
 		ret = gs_ar0234_i_cntrl(sensor);
-		break;	
-	case V4L2_CID_REBOOT: 
+		break;
+	case V4L2_CID_REBOOT:
 		ret = gs_ar0234_write_reg8(sensor, GS_REG_SAVE_RESTART, 0x99);
 		dev_dbg_ratelimited(sd->dev, "%s: set reboot\n", __func__);
-		break;											
+		break;
 	default:
 		ret = -EINVAL;
 		break;
@@ -618,7 +620,7 @@ static int gs_ar0234_i_cntrl(struct gs_ar0234_dev *sensor)
 	if (ret < 0) return ret;
 
 	ret = gs_ar0234_read_reg8(sensor, GS_REG_ZOOM_SPEED,(u8 *) &sensor->ctrls.zoom_speed->cur.val);
-	if (ret < 0) return ret; 
+	if (ret < 0) return ret;
 
 	ret = gs_ar0234_read_reg8(sensor, GS_REG_PAN, (u8 *) &sensor->ctrls.pan->cur.val);
 	if (ret < 0) return ret;
@@ -674,7 +676,7 @@ static int gs_ar0234_i_cntrl(struct gs_ar0234_dev *sensor)
 	if (ret < 0) return ret;
 	sensor->ctrls.roi_mode_0->cur.val = ((uval8>>0) & 0x01);
 	sensor->ctrls.roi_mode_1->cur.val = ((uval8>>1) & 0x01);
-	sensor->ctrls.roi_mode_2->cur.val = ((uval8>>2) & 0x01);	
+	sensor->ctrls.roi_mode_2->cur.val = ((uval8>>2) & 0x01);
 
 	ret = gs_ar0234_read_reg8(sensor, GS_REG_BLC_MODE, &uval8);
 	if (ret < 0) return ret;
@@ -690,7 +692,7 @@ static int gs_ar0234_i_cntrl(struct gs_ar0234_dev *sensor)
 			break;
 		case 0x3:
 			sensor->ctrls.exposure_metering->cur.val = V4L2_EXPOSURE_METERING_MATRIX;
-			break;	
+			break;
 		default:
 			sensor->ctrls.exposure_metering->cur.val = V4L2_EXPOSURE_METERING_CENTER_WEIGHTED;
 			dev_dbg(sensor->dev, "%s: exposure_metering = %x is this correct?\n", __func__, uval8);
@@ -714,10 +716,10 @@ static int gs_ar0234_i_cntrl(struct gs_ar0234_dev *sensor)
 
 	ret = gs_ar0234_read_reg8(sensor, GS_REG_BLC_FACE_LEVEL, (u8 *) &sensor->ctrls.blc_face_level->cur.val);
 	if (ret < 0) return ret;
-	
+
 	ret = gs_ar0234_read_reg8(sensor, GS_REG_BLC_FACE_WEIGHT, (u8 *) &sensor->ctrls.blc_face_weight->cur.val);
 	if (ret < 0) return ret;
-	
+
 	ret = gs_ar0234_read_reg8(sensor, GS_REG_BLC_ROI_LEVEL, (u8 *) &sensor->ctrls.blc_roi_level->cur.val);
 	if (ret < 0) return ret;
 
@@ -744,7 +746,7 @@ static int gs_ar0234_i_cntrl(struct gs_ar0234_dev *sensor)
 
 	ret = gs_ar0234_read_reg8(sensor, GS_REG_WHITEBALANCE, &uval8);
 	if (ret < 0) return ret;
-	sensor->ctrls.auto_wb->cur.val = (uval8 & 0x0F) == 0x0F ? 1 : 0; 
+	sensor->ctrls.auto_wb->cur.val = (uval8 & 0x0F) == 0x0F ? 1 : 0;
 
 	ret = gs_ar0234_read_reg16(sensor, GS_REG_WB_TEMPERATURE, &uval);
 	if (ret < 0) return ret;
@@ -1140,7 +1142,7 @@ static int gs_ar0234_init_controls(struct gs_ar0234_dev *sensor)
 
 	/* we can use our own mutex for the ctrl lock */
 	hdl->lock = &sensor->lock;
- 
+
 	/* Clock related controls */
 	// ctrls->pixel_rate = v4l2_ctrl_new_std(hdl, ops, V4L2_CID_PIXEL_RATE, 0, INT_MAX, 1, gs_ar0234_calc_pixel_rate(sensor));
 
@@ -1208,17 +1210,17 @@ static int gs_ar0234_init_controls(struct gs_ar0234_dev *sensor)
 	ctrls->pan = v4l2_ctrl_new_std(hdl, ops, V4L2_CID_PAN_ABSOLUTE, 0, 0x80, 1, 0x40);
 	ctrls->tilt = v4l2_ctrl_new_std(hdl, ops, V4L2_CID_TILT_ABSOLUTE, 0, 0x80, 1, 0x40);
 	ctrls->zoom_speed = v4l2_ctrl_new_custom(hdl, &zoom_speed, NULL);
-	
+
 
 	/* anti flicker */
 	ctrls->powerline = v4l2_ctrl_new_std_menu(hdl, ops, V4L2_CID_POWER_LINE_FREQUENCY, V4L2_CID_POWER_LINE_FREQUENCY_AUTO, 0, V4L2_CID_POWER_LINE_FREQUENCY_AUTO);
-	
+
 	/* test pattern */
 	ctrls->testpattern = v4l2_ctrl_new_std_menu_items(hdl, ops, V4L2_CID_TEST_PATTERN, ARRAY_SIZE(gs_ar0234_test_pattern_menu) - 1, 0, 0, gs_ar0234_test_pattern_menu);
-	
+
 	/* effects */
 	ctrls->colorfx = v4l2_ctrl_new_std_menu(hdl, ops, V4L2_CID_COLORFX, V4L2_COLORFX_SET_CBCR, 0, V4L2_COLORFX_NONE);
-	
+
 	if (hdl->error) {
 		ret = hdl->error;
 		dev_err(sensor->dev, "%s: error: %d\n", __func__, ret);
@@ -1397,7 +1399,7 @@ static int gs_ar0234_s_stream(struct v4l2_subdev *sd, int enable)
 	}
 #if 1
 	mutex_lock(&sensor->lock);
-	
+
 	// turn off mipi?
 	gs_ar0234_write_reg8(sensor, 0xE1, 0x02); // format change state
 	// set rres, fixed formats reg 0x10,
@@ -1412,7 +1414,7 @@ static int gs_ar0234_s_stream(struct v4l2_subdev *sd, int enable)
 	// ret = gs_ar0234_upcall(sensor, "start_stream");
 
 	mutex_unlock(&sensor->lock);
-#endif	
+#endif
 	if (enable)
 		pr_debug("%s: Starting stream at WxH@fps=%dx%d@%d\n", __func__, sensor->mode->width, sensor->mode->height, sensor->mode->framerate);
 	else
@@ -1495,7 +1497,7 @@ static int gs_ar0234_probe(struct i2c_client *client)
 	sensor->mbus_num = GS_CF_YUV422;
 
 	/* request reset pin */
-	sensor->reset_gpio = devm_gpiod_get_optional(dev, "reset", GPIOD_OUT_LOW);
+	sensor->reset_gpio = devm_gpiod_get_optional(dev, "reset", GPIOD_ASIS);
 	if (IS_ERR(sensor->reset_gpio)) {
 		ret = PTR_ERR(sensor->reset_gpio);
 		if (ret != -EPROBE_DEFER)
