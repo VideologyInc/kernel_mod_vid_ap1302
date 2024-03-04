@@ -72,15 +72,15 @@ def writefile(filename):
     myfile.close()
 
 # write nvm buffer to camera
-def writenvm():
+def writenvm(nvmblocknr):
     global mybytebuff
-    if(args.nvmblocknr == 99):
+    if(nvmblocknr == 99):
         line = 0
         for myline in mybytebuff:
             gsi2c.write_nvm(line>>4, myline[0]&0xFF, myline[1:])
             line += 1 # increase page number
     else:
-        line = args.nvmblocknr<<4
+        line = nvmblocknr<<4
         for myline in mybytebuff[args.nvmblocknr<<4:args.nvmblocknr+1<<4]:
             gsi2c.write_nvm(line>>4, myline[0]&0xFF, myline[1:])
             line += 1 # increase page number        
@@ -101,7 +101,7 @@ def main():
     parser = argparse.ArgumentParser(description="Read or Write nvm ",prog="flashnvm")
     parser.add_argument('-f', dest='filename', metavar='filename', default="NONE", help='Image filename')
     parser.add_argument('-w', dest='writenvm', action='store_true', help='Write nvm')
-    parser.add_argument('-n', dest='nvmblocknr', metavar='nvmblocknr', type=int, default=99, help='write nvm block: 0=userreg, 1=usercal, 2=factoryreg, 3=factorycal')
+    parser.add_argument('-n', dest='nvmblocknr', metavar='nvmblocknr', type=int, default=99, help='write nvm block: 0=userreg, 1=usercal, 2=factoryreg, 3=factorycal, 99=all')
     parser.add_argument('-p',  dest='password', metavar='password', type=lambda x: int(x,0), default=0, help='pasword in case of writing to factory space')
     parser.add_argument('-i', dest='iic', metavar='iic',type=int, default=0, help='i2c bus 0 or 1')
     args = parser.parse_args()
@@ -128,7 +128,7 @@ def main():
 
     # in case of write, update nvm
     if(args.writenvm):
-         writenvm()
+         writenvm(args.nvmblocknr)
     # in case of read, print or store to file
     else: 
          readnvm()

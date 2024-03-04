@@ -24,7 +24,7 @@ def readfile(filename):
     #load the img file in byte array
     global mybytebuff
     global appsize
-    myfile = open(args.filename, "r")
+    myfile = open(filename, "r")
     lines = myfile.readlines()
     myfile.close()
     for myline in lines:
@@ -36,17 +36,22 @@ def readfile(filename):
             mybytebuff.append([int(i, 16) for i in myline.split()])
     appsize = sum((len(x)-1) for x in mybytebuff) # calculate appsize        
 
-startaddress = 0x1A00 # start address of mainapp
 
 
 
 def main():
     parser = argparse.ArgumentParser(description="Update mainapp img file",prog="flashapp")
     parser.add_argument('-f', dest='filename', metavar='filename',  required=True, help='Image filename')
-    parser.add_argument('-p',  dest='password', metavar='password', type=lambda x: int(x,0), default=0, help='set password')
+    parser.add_argument('-p', dest='password', metavar='password', type=lambda x: int(x,0), default=0, help='set password')
+    parser.add_argument('-a', dest='writeapp', action='store_true', help='Write app only')
+    parser.add_argument('-n', dest='writenvm', action='store_true', help='Write nvm only')
+    parser.add_argument('-D', dest='dummy', action='store_true', help='Dummy I2C ransfers')
     parser.add_argument('-i', dest='iic', metavar='iic',type=int, default=0, help='i2c bus 0 or 1')
     args = parser.parse_args()
 
+    
+    gsi2c.dummy(args.dummy)
+    
     if args.iic == 0:
         gsi2c.i2c = I2C("/dev/links/csi0_i2c")
     elif args.iic == 1:
@@ -54,6 +59,8 @@ def main():
     else:
         print("wrong i2c bus!\n")
         return
+    
+
 
 
     readfile(args.filename)
@@ -69,16 +76,37 @@ def main():
     #print("bootid: %04X" %(gsi2c.bootid()))
 
     print("Erase flash ",end="",flush=True)
-    gsi2c.erase_all()
+    if args.writeapp :
+        gsi2c.erase_app()
+    elif args.writenvm :
+        gsi2c.erase_nvm()
+    else:
+        gsi2c.erase_all()
     gsi2c.check() # wait for erase to finish
     print("")
 
     # write to flash
-    print("Writing %d bytes" %(appsize))
-    for block in mybytebuff:
-        gsi2c.flashwrite(block[0],block[1:])
-        #print(block[0],block[1:])
-        percprint(startaddress,appsize,block[0])
+    if args.writeapp:  # app only
+        for block in mybytebuff:
+            if block[0] > gsi2c.FLASH_APP_MAX: 
+                break # exit
+            gsi2c.flashwrite(block[0], block[1:])
+            #print(block[0],block[1:])
+            percprint(gsi2c.FLASH_APP_START, gsi2c.FLASH_APP_SIZE, block[0])
+    elif args.writenvm: # nvm only
+        for block in mybytebuff:
+            if block[0] > gsi2c.FLASH_NVM_MAX: 
+                break # exit
+            if block[0] >= gsi2c.FLASH_NVM_START:
+                gsi2c.flashwrite(block[0], block[1:])
+                #print(block[0],block[1:])
+                percprint(gsi2c.FLASH_NVM_START, gsi2c.FLASH_NVM_SIZE, block[0])
+    else:
+        print("Writing %d bytes" %(appsize))
+        for block in mybytebuff:
+            gsi2c.flashwrite(block[0], block[1:])
+            #print(block[0],block[1:])
+            percprint(gsi2c.FLASH_APP_START, appsize, block[0])
     gsi2c.check() # wait for write to finish
     print("")
 
