@@ -15,7 +15,8 @@ _FLASH_CRC_ADDRESS       = 0xF3F0
 _FLASH_APP_SIZE_ADDRESS  = 0xF3F4
 _APP_MAX_ADDRESS         = 0xF3E0
 _FLASH_APP_START_ADDRESS = 0x1A00
-_FLASH_MAX = 0xF9FF
+_FLASH_MAX               = 0xF9FF
+_FLASH_PAGE_SIZE         = 512
 
 NVM_USER_REG = 0
 NVM_USER_CAL = 1
@@ -276,8 +277,11 @@ def erase_size():
 
 # erase data in flash page     
 def erase_page(address, size):
-    msgs = [I2C.Message([0x44, address&0xFF, (address>>8)&0xFF, size&0xFF, (size>>8)&0xFF], read=False)] 
-    data = tranfer(msgs) # do we need more time?
+    if(size > _FLASH_PAGE_SIZE): # MCU Bootloader bug!
+        print("[ERROR] size must be smaller or equal to pagesize.\n")
+    else:
+        msgs = [I2C.Message([0x44, address&0xFF, (address>>8)&0xFF, size&0xFF, (size>>8)&0xFF], read=False)] 
+        data = tranfer(msgs) # do we need more time?
 
 # erase flash
 def erase_all():    
