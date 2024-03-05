@@ -16,15 +16,12 @@ def arrprint(address,arr,size):
 	for n in range (0,size,1):
 		print("%02X "%(arr[n]),end="",flush=True)
 
-#load the img file in byte array
-mybytebuff = []
-appsize = 0
 
 def readfile(filename):
     #load the img file in byte array
-    global mybytebuff
-    global appsize
-    myfile = open(args.filename, "r")
+    mybytebuff = []
+    appsize = 0
+    myfile = open(filename, "r")
     lines = myfile.readlines()
     myfile.close()
     for myline in lines:
@@ -35,18 +32,52 @@ def readfile(filename):
         elif myline.find('//') < 0:
             mybytebuff.append([int(i, 16) for i in myline.split()])
     appsize = sum((len(x)-1) for x in mybytebuff) # calculate appsize        
+    return appsize, mybytebuff
 
-startaddress = 0x1A00 # start address of mainapp
 
+def writebuf(writeapp:bool, writenvm:bool, mybytebuff, appsize):
+    if writeapp:  # app only
+        for block in mybytebuff:
+            if block[0] > gsi2c.FLASH_APP_MAX: 
+                break # exit
+            gsi2c.flashwrite(block[0], block[1:])
+            #print(block[0],block[1:])
+            percprint(gsi2c.FLASH_APP_START, gsi2c.FLASH_APP_SIZE, block[0])
+        print("\rProgress: %2d%% "%(100),end="",flush=True)
+    elif writenvm: # nvm only
+        for block in mybytebuff:
+            if block[0] > gsi2c.FLASH_NVM_MAX: 
+                break # exit
+            if block[0] >= gsi2c.FLASH_NVM_START:
+                gsi2c.flashwrite(block[0], block[1:])
+                #print(block[0],block[1:])
+                percprint(gsi2c.FLASH_NVM_START, gsi2c.FLASH_NVM_SIZE, block[0])
+        print("\rProgress: %2d%% "%(100),end="",flush=True)
+    else:
+        print("Writing %d bytes" %(appsize))
+        for block in mybytebuff:
+            gsi2c.flashwrite(block[0], block[1:])
+            #print(block[0],block[1:])
+            percprint(gsi2c.FLASH_APP_START, appsize, block[0])
 
 
 def main():
+
+    #load the img file in byte array
+    mybytebuff = []
+    appsize = 0
+
     parser = argparse.ArgumentParser(description="Update mainapp img file",prog="flashapp")
     parser.add_argument('-f', dest='filename', metavar='filename',  required=True, help='Image filename')
-    parser.add_argument('-p',  dest='password', metavar='password', type=lambda x: int(x,0), default=0, help='set password')
+    parser.add_argument('-p', dest='password', metavar='password', type=lambda x: int(x,0), default=0, help='set password')
+    parser.add_argument('-a', dest='writeapp', action='store_true', help='Write app only')
+    parser.add_argument('-n', dest='writenvm', action='store_true', help='Write nvm only')
+    parser.add_argument('-D', dest='dummy', action='store_true', help='Dummy I2C ransfers')
     parser.add_argument('-i', dest='iic', metavar='iic',type=int, default=0, help='i2c bus 0 or 1')
     args = parser.parse_args()
-
+ 
+    gsi2c.dummy(args.dummy)
+    
     if args.iic == 0:
         gsi2c.i2c = I2C("/dev/links/csi0_i2c")
     elif args.iic == 1:
@@ -54,9 +85,8 @@ def main():
     else:
         print("wrong i2c bus!\n")
         return
-
-
-    readfile(args.filename)
+    
+    appsize, mybytebuff = readfile(args.filename)
     gsi2c.set_password(args.password) # set the password to update
     sleep(1) 
     
@@ -69,16 +99,17 @@ def main():
     #print("bootid: %04X" %(gsi2c.bootid()))
 
     print("Erase flash ",end="",flush=True)
-    gsi2c.erase_all()
+    if args.writeapp :
+        gsi2c.erase_app()
+    elif args.writenvm :
+        gsi2c.erase_nvm()
+    else:
+        gsi2c.erase_all()
     gsi2c.check() # wait for erase to finish
     print("")
 
     # write to flash
-    print("Writing %d bytes" %(appsize))
-    for block in mybytebuff:
-        gsi2c.flashwrite(block[0],block[1:])
-        #print(block[0],block[1:])
-        percprint(startaddress,appsize,block[0])
+    writebuf(args.writeapp, args.writenvm, mybytebuff, appsize)
     gsi2c.check() # wait for write to finish
     print("")
 
@@ -88,7 +119,7 @@ def main():
     gsi2c.check() # wait for crc_calc to finish
     print("")
 
-    app_size = gsi2c.read_size() # read CRC from mcu 
+    app_size = gsi2c.read_size() # read SIZE from mcu 
     print("app_size %04X " %(app_size),end="",flush=True)
     gsi2c.check() # wait for crc_calc to finish
     print("")

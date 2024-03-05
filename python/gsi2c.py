@@ -11,12 +11,20 @@ i2c = I2C("/dev/links/csi0_i2c")
 _maxretries = 150
 _retrytime = 0.005 #5ms
 
+FLASH_APP_START          = 0x1A00
+FLASH_APP_MAX            = 0xF3FF
+FLASH_APP_SIZE           = FLASH_APP_MAX - FLASH_APP_START + 1
+FLASH_NVM_START          = 0xF400
+FLASH_NVM_MAX            = 0xF7FF
+FLASH_NVM_SIZE           = FLASH_NVM_MAX - FLASH_NVM_START + 1
+
 _FLASH_CRC_ADDRESS       = 0xF3F0
 _FLASH_APP_SIZE_ADDRESS  = 0xF3F4
-_APP_MAX_ADDRESS         = 0xF3E0
+_FLASH_APP_MAX_ADDRESS   = 0xF3E0
 _FLASH_APP_START_ADDRESS = 0x1A00
 _FLASH_MAX               = 0xF9FF
 _FLASH_PAGE_SIZE         = 512
+
 
 NVM_USER_REG = 0
 NVM_USER_CAL = 1
@@ -28,18 +36,25 @@ def dprint(a):
     b=a
     #print (a,end="")
 
+_dummy: bool = False
+def dummy(onoff: bool):
+    global _dummy
+    _dummy = onoff    
+
 def tranfer(msgs):
     retries = 0
     err = 0
-    while (retries < _maxretries):
-        try:
-            err = i2c.transfer(0x38, msgs)
-        except: 
-            dprint("%d "%(retries))
-        if(err == None): break
-        retries += 1
-        sleep(_retrytime)
-    #print (msgs[-1].data)
+    if _dummy == False:
+        while (retries < _maxretries):
+            try:
+                err = i2c.transfer(0x38, msgs)
+            except: 
+                dprint("%d "%(retries))
+            if(err == None): break
+            retries += 1
+            sleep(_retrytime)
+    else:
+        print (msgs[-1].data)
     return msgs[-1].data
 
     
@@ -53,15 +68,18 @@ def i2ccheck():
     retries = 0
     err = 0
     msgs = I2C.Message([0], read=False)
-    while (retries < 100): # max 10 seconds
-        try:
-            err = i2c.transfer(0x38)
-        except: 
-            dprint("%d "%(retries))
-        if(err == None): break
-        retries += 1
-        sleep(0.01) #10ms 
-        print(". " ,end="",flush=True)
+    if _dummy == False:
+        while (retries < 100): # max 10 seconds
+            try:
+                err = i2c.transfer(0x38)
+            except: 
+                dprint("%d "%(retries))
+            if(err == None): break
+            retries += 1
+            sleep(0.01) #10ms 
+            print(". " ,end="",flush=True)
+    else:
+        print (msgs[-1].data)       
 
 def read8(addr):
     dprint("\tread8 %02X = "%(addr))
@@ -282,6 +300,16 @@ def erase_page(address, size):
     else:
         msgs = [I2C.Message([0x44, address&0xFF, (address>>8)&0xFF, size&0xFF, (size>>8)&0xFF], read=False)] 
         data = tranfer(msgs) # do we need more time?
+
+# erase mainapp
+def erase_app():
+    for n in range(_FLASH_APP_START_ADDRESS, FLASH_APP_MAX, _FLASH_PAGE_SIZE):
+        erase_page(n, _FLASH_PAGE_SIZE)
+
+# erase nvm
+def erase_nvm():
+    for n in range(FLASH_NVM_START, FLASH_NVM_MAX, _FLASH_PAGE_SIZE):
+        erase_page(n, _FLASH_PAGE_SIZE)
 
 # erase flash
 def erase_all():    
