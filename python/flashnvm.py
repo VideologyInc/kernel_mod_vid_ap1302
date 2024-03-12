@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-2.0-or-later
 
 from periphery import I2C
 from time import sleep
@@ -21,9 +22,9 @@ def printbuf(mybytebuff):
         if(line % 16 == 0): print("")
 
 def get_nvmspace_name(val):
-    switcher={ 0:'User Registers', 
-               1:'User Calibration', 
-               2:'Factory Registers', 
+    switcher={ 0:'User Registers',
+               1:'User Calibration',
+               2:'Factory Registers',
                3:'Factory Calibration', }
     return switcher.get(val,"Invalid")
 
@@ -41,7 +42,7 @@ def readfile(filename):
         elif myline.find('//') < 0:
             mybytebuff.append([int(i, 16) for i in myline.split()])
     nvmsize = sum((len(x)-1) for x in mybytebuff) # calculate appsize
-    return nvmsize, mybytebuff        
+    return nvmsize, mybytebuff
 
 #write buffer to image file
 def writefile(filename, mybytebuff):
@@ -53,7 +54,7 @@ def writefile(filename, mybytebuff):
     myfile.write("// User version:    %3d.%d\n"%(mybytebuff[0xE][0xF],mybytebuff[0xE][0xE]))
     line=0
     for myline in mybytebuff:
-        if(line % 16 == 0): 
+        if(line % 16 == 0):
             myfile.write("////////////////////////////////////////////////////\n")
             myfile.write("// Start of page: %d (%s)\n"%(line>>4,get_nvmspace_name(line>>4)))
             myfile.write("//// 00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F\n")
@@ -62,7 +63,7 @@ def writefile(filename, mybytebuff):
             myfile.write("%02X "%(mybyte))
         myfile.write("\n")
         line += 1
-    myfile.write("//")    
+    myfile.write("//")
     myfile.close()
 
 # write nvm buffer to camera
@@ -76,7 +77,7 @@ def writenvm(nvmblocknr, mybytebuff):
         line = nvmblocknr<<4
         for myline in mybytebuff[nvmblocknr<<4:nvmblocknr+1<<4]:
             gsi2c.write_nvm(line>>4, myline[0]&0xFF, myline[1:])
-            line += 1 # increase page number        
+            line += 1 # increase page number
 
 # read nvm from camera
 def readnvm():
@@ -128,7 +129,7 @@ def main():
     if(args.writenvm):
          writenvm(args.nvmblocknr, mybytebuff)
     # in case of read, print or store to file
-    else: 
+    else:
          mybytebuff = readnvm()
          if(args.filename == "NONE"):
             printbuf(mybytebuff)

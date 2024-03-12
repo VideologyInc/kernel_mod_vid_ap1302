@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-2.0-or-later
 
 from periphery import I2C
 import gsi2c
@@ -20,7 +21,7 @@ def readfile(filename):
 	for myline in lines:
 		if myline.find('//') < 0:
 			mybytebuff.append([int(i, 16) for i in myline.split()])
-	ispsize = sum((len(x)-1) for x in mybytebuff) # calculate appsize  
+	ispsize = sum((len(x)-1) for x in mybytebuff) # calculate appsize
 	return ispsize, mybytebuff
 
 def isperase():
@@ -44,7 +45,7 @@ def ispwrite(mybytebuff, ispsize):
 			status = gsi2c.isp_get_spi_status() # get status
 			if(status[0] == 0) & (status[1] == 0): writing = False
 			timeout += 1
-			if timeout > 1000: 
+			if timeout > 1000:
 				print("[ERROR] Timeout whil writing spiflash!")
 				quit()
 	print()
@@ -56,16 +57,16 @@ def ispverify(mybytebuff, ispsize):
 		size  = len(block) - 1
 		for n in range(1, size+1, 1):
 			mycrc = crc.UpdateCRC(mycrc, block[n])
-	#print("CRC 1 = 0x%04X\n"%mycrc)	
+	#print("CRC 1 = 0x%04X\n"%mycrc)
 	mycrc2 = gsi2c.isp_calc_crc(0, ispsize - 1) # request mcu to calculate CRC
 	#print("CRC 2 = 0x%04X\n"%mycrc2)
 	print()
-	if(mycrc == mycrc2): 
+	if(mycrc == mycrc2):
 		return True
-	else: 
+	else:
 		return False
 
- 
+
 def main():
 	#load the img file in byte array
 	mybytebuff = []
@@ -87,31 +88,31 @@ def main():
 	else:
 		print("wrong i2c bus!\n")
 		return
-	
+
 	ispsize, mybytebuff = readfile(args.filename)
-	
+
 	gsi2c.set_password(args.password) # set the password to update
-	
+
 	gsi2c.write8(0xEB,0x82) # set camera to upgrader mode
-	
+
 	# get the spiflash id
 	id = gsi2c.isp_get_spi_id(0x9F) # get SPI-FLASH  (0x9F = JEDEC) or (0x90 =ID)
 	print("SPI ID: ",end="")
 	print(id)
-	if((id[0] != 0xEF) or (id[1] != 0x40) or (id[2] != 0x14)): 
+	if((id[0] != 0xEF) or (id[1] != 0x40) or (id[2] != 0x14)):
 		print("[ERROR] JEDEC ID")
 		quit()
-	
+
 	# get the spiflash status
 	status = gsi2c.isp_get_spi_status() # get status
-	if(status[0] != 0) | (status[1] != 0): 
+	if(status[0] != 0) | (status[1] != 0):
 		print("[ERROR] status")
 		quit()
-	
+
 	# erase the spi flash
 	print("Erasing")
 	isperase()
-	
+
 	# programm the spiflash
 	print("Programming")
 	ispwrite(mybytebuff, ispsize)

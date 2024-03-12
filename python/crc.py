@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-2.0-or-later
 
-## 
+##
 #  @file crc.py
 #  @brief Brief description
-#  
+#
 
 
 
@@ -13,7 +14,7 @@ INITIAL=0xFFFF
 def UpdateCRC (CRC_acc, CRC_input):
 	# Create the CRC "dividend" for polynomial arithmetic (binary arithmetic with no carries)
 	CRC_acc = CRC_acc ^ (CRC_input << 8)
-	
+
 	# "Divide" the poly into the dividend using CRC XOR subtraction
 	# CRC_acc holds the "remainder" of each divide
 	# Only complete this division for 8 bits since input is 1 byte
@@ -33,7 +34,7 @@ def GetCRC(crc_init, input_buf, size):
 	crc=crc_init
 	for n in range(size):
 		crc = UpdateCRC(crc, input_buf[n])
-	return crc	
+	return crc
 
 def main():
     print()

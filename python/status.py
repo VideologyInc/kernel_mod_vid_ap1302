@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-2.0-or-later
 
 from periphery import I2C
 import argparse
@@ -27,7 +28,7 @@ def main():
         return
 
 
-    if(gsi2c.bootid() == 0x5AA5): 
+    if(gsi2c.bootid() == 0x5AA5):
         print("Bootloader is active!")
 
     print("MCU version = %d.%d" %(gsi2c.read8(0xFF),gsi2c.read8(0xFE)))

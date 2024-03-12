@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-2.0-or-later
 
 from time import sleep
 import gsi2c
@@ -16,7 +17,7 @@ def main():
 
     print("read16: 0x%04X" % gsi2c.read16(0x14))
     gsi2c.write16(0x14,0x02D1)
-    
+
     gsi2c.write16(0x14,0x02D2)
     gsi2c.write16(0x14,0x02D3)
     gsi2c.write16(0x14,0x02D0)

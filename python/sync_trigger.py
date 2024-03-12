@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-2.0-or-later
 
 from decimal import Decimal
 from periphery import I2C
@@ -18,7 +19,7 @@ def main():
 
     print("%3.2f fps (%7.2f us)\n"%(Decimal(args.fps),(1000_000 / Decimal(args.fps))))
 
-    if args.config == True: 
+    if args.config == True:
         gsi2c.i2c = I2C("/dev/links/csi0_i2c")
         gsi2c.write16(0x60,0x3FFF) # set duty cycle to 0.25 ~0.5
         gsi2c.write8(0x68,0x07) # enable sync (pwm)

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-2.0-or-later
 
 from periphery import I2C
 import os, sys, struct
@@ -31,14 +32,14 @@ def readfile(filename):
             a=2 #dummy
         elif myline.find('//') < 0:
             mybytebuff.append([int(i, 16) for i in myline.split()])
-    appsize = sum((len(x)-1) for x in mybytebuff) # calculate appsize        
+    appsize = sum((len(x)-1) for x in mybytebuff) # calculate appsize
     return appsize, mybytebuff
 
 
 def writebuf(writeapp:bool, writenvm:bool, mybytebuff, appsize):
     if writeapp:  # app only
         for block in mybytebuff:
-            if block[0] > gsi2c.FLASH_APP_MAX: 
+            if block[0] > gsi2c.FLASH_APP_MAX:
                 break # exit
             gsi2c.flashwrite(block[0], block[1:])
             #print(block[0],block[1:])
@@ -46,7 +47,7 @@ def writebuf(writeapp:bool, writenvm:bool, mybytebuff, appsize):
         print("\rProgress: %2d%% "%(100),end="",flush=True)
     elif writenvm: # nvm only
         for block in mybytebuff:
-            if block[0] > gsi2c.FLASH_NVM_MAX: 
+            if block[0] > gsi2c.FLASH_NVM_MAX:
                 break # exit
             if block[0] >= gsi2c.FLASH_NVM_START:
                 gsi2c.flashwrite(block[0], block[1:])
@@ -75,9 +76,9 @@ def main():
     parser.add_argument('-D', dest='dummy', action='store_true', help='Dummy I2C ransfers')
     parser.add_argument('-i', dest='iic', metavar='iic',type=int, default=0, help='i2c bus 0 or 1')
     args = parser.parse_args()
- 
+
     gsi2c.dummy(args.dummy)
-    
+
     if args.iic == 0:
         gsi2c.i2c = I2C("/dev/links/csi0_i2c")
     elif args.iic == 1:
@@ -85,11 +86,11 @@ def main():
     else:
         print("wrong i2c bus!\n")
         return
-    
+
     appsize, mybytebuff = readfile(args.filename)
     gsi2c.set_password(args.password) # set the password to update
-    sleep(1) 
-    
+    sleep(1)
+
     print("Start Bootloader ",end="",flush=True)
     gsi2c.write8(0xF0, 0xA5) # start the bootloader
     sleep(1) # wait for bootloader
@@ -114,12 +115,12 @@ def main():
     print("")
 
     # get the crc's
-    crc_read = gsi2c.read_crc() # read CRC from mcu 
+    crc_read = gsi2c.read_crc() # read CRC from mcu
     print("crc_read %04X " %(crc_read) ,end="",flush=True)
     gsi2c.check() # wait for crc_calc to finish
     print("")
 
-    app_size = gsi2c.read_size() # read SIZE from mcu 
+    app_size = gsi2c.read_size() # read SIZE from mcu
     print("app_size %04X " %(app_size),end="",flush=True)
     gsi2c.check() # wait for crc_calc to finish
     print("")
@@ -135,7 +136,7 @@ def main():
         print("Now Rebooting . . . ",end="",flush=True)
         gsi2c.reboot() # reboot, main app should start
         sleep(1) # wait for boot
-        print("")	
+        print("")
     else:
         print("\nProgamming Failed!")
         print("CRC stored in flash:       0x%04X"%(crc_read))

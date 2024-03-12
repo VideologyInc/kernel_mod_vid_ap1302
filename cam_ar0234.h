@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
 /*
  * Copyright (C) 2023 Videology Inc, Inc. All Rights Reserved.
  */
@@ -47,7 +48,7 @@
 #define V4L2_CID_STORE_REGISTERS    (V4L2_CID_CAMERA_CAM_AR0234+16)
 #define V4L2_CID_RESTORE_REGISTERS  (V4L2_CID_CAMERA_CAM_AR0234+17)
 #define V4L2_CID_RESTORE_FACTORY 	(V4L2_CID_CAMERA_CAM_AR0234+18) // restores both registers and calibration parameters
-#define V4L2_CID_REBOOT         	(V4L2_CID_CAMERA_CAM_AR0234+19) 
+#define V4L2_CID_REBOOT         	(V4L2_CID_CAMERA_CAM_AR0234+19)
 
 // User controls
 #define V4L2_CID_NOISE_RED      	(V4L2_CID_USER_CAM_AR0234+0)
@@ -56,11 +57,11 @@
 #define V4L2_CID_FACE_DETECT_0			(V4L2_CID_DETECT_CAM_AR0234+0)
 #define V4L2_CID_FACE_DETECT_4			(V4L2_CID_DETECT_CAM_AR0234+1)
 #define V4L2_CID_FACE_DETECT_5			(V4L2_CID_DETECT_CAM_AR0234+2)
-#define V4L2_CID_FACE_DETECT_SPEED  	(V4L2_CID_DETECT_CAM_AR0234+3)	
-#define V4L2_CID_FACE_DETECT_THRESHOLD	(V4L2_CID_DETECT_CAM_AR0234+4)	
-#define V4L2_CID_FACE_CHROMA_THRESHOLD	(V4L2_CID_DETECT_CAM_AR0234+5)	
-#define V4L2_CID_FACE_MIN_SIZE			(V4L2_CID_DETECT_CAM_AR0234+6)	
-#define V4L2_CID_FACE_MAX_SIZE			(V4L2_CID_DETECT_CAM_AR0234+7)	
+#define V4L2_CID_FACE_DETECT_SPEED  	(V4L2_CID_DETECT_CAM_AR0234+3)
+#define V4L2_CID_FACE_DETECT_THRESHOLD	(V4L2_CID_DETECT_CAM_AR0234+4)
+#define V4L2_CID_FACE_CHROMA_THRESHOLD	(V4L2_CID_DETECT_CAM_AR0234+5)
+#define V4L2_CID_FACE_MIN_SIZE			(V4L2_CID_DETECT_CAM_AR0234+6)
+#define V4L2_CID_FACE_MAX_SIZE			(V4L2_CID_DETECT_CAM_AR0234+7)
 
 // Image Processing  controls
 #define V4L2_CID_PROC_BLA			(V4L2_CID_PROC_CAM_AR0234+0)
@@ -187,7 +188,7 @@ struct gs_ar0234_ctrls {
 	struct v4l2_ctrl *face_detect_0;
 	struct v4l2_ctrl *face_detect_4;
 	struct v4l2_ctrl *face_detect_5;
-	struct v4l2_ctrl *face_detect_speed;	
+	struct v4l2_ctrl *face_detect_speed;
 	struct v4l2_ctrl *face_detect_threshold;
 	struct v4l2_ctrl *face_chroma_threshold;
 	struct v4l2_ctrl *face_min_size;

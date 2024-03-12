@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: GPL-2.0-or-later
+
 from nicegui import ui
 from nicegui.events import ValueChangeEventArguments
 
