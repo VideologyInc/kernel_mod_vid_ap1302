@@ -2,8 +2,9 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 
 from periphery import I2C
-import gsi2c
-import crc
+from . import gsi2c
+from . import crc
+import os
 import argparse
 from time import sleep
 
@@ -76,7 +77,7 @@ def main():
 	parser.add_argument('-f', dest='filename', metavar='filename',  required=True, help='Image filename')
 	parser.add_argument('-p',  dest='password', metavar='password', type=lambda x: int(x,0), default=0, help='set password')
 	parser.add_argument('-D', dest='dummy', action='store_true', help='Dummy I2C ransfers')
-	parser.add_argument('-i', dest='iic', metavar='iic',type=int, default=0, help='i2c bus 0 or 1')
+	parser.add_argument('-i', dest='iic', metavar='iic',type=lambda p: p if os.path.exists(p) else FileNotFoundError(p), default='/dev/i2c0', help='i2c dev path')
 	args = parser.parse_args()
 
 	gsi2c.dummy(args.dummy)

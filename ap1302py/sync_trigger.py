@@ -4,7 +4,7 @@
 from decimal import Decimal
 from periphery import I2C
 import argparse
-import gsi2c
+from .  import gsi2c
 
 
 def main():

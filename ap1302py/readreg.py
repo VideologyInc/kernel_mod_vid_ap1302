@@ -3,25 +3,20 @@
 
 from periphery import I2C
 import argparse
-import gsi2c
+from .  import gsi2c
+import os
 
 def main():
     parser = argparse.ArgumentParser(description="I2C readreg",prog="readreg")
     parser.add_argument('-r', dest='register', metavar='n', type=lambda x: int(x,0), required=True, help='register address')
     parser.add_argument('-s', dest='size', metavar='n', type=lambda x: int(x,0), default=8,help='register size',choices=[8,16,32])
     parser.add_argument('-c', dest='count', metavar='count',type=int, default=1, help='number of sequential registers to read')
-    parser.add_argument('-i', dest='iic', metavar='iic',type=int, default=0, help='i2c bus 0 or 1')
+    parser.add_argument('-i', dest='iic', metavar='iic',type=lambda p: p if os.path.exists(p) else FileNotFoundError(p), default='/dev/i2c0', help='i2c dev path')
     args = parser.parse_args()
 
     regaddr = args.register
 
-    if args.iic == 0:
-        gsi2c.i2c = I2C("/dev/links/csi0_i2c")
-    elif args.iic == 1:
-        gsi2c.i2c = I2C("/dev/links/csi1_i2c")
-    else:
-        print("wrong i2c bus!\n")
-        return
+    gsi2c.i2c = I2C(args.iic)
 
     for n in range(0,args.count,1):
         if args.size == 8:

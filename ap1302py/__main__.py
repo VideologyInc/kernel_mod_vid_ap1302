@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 
 import sys
-from gs234py import flashapp, flashisp, readreg, status, sync_trigger, writereg
+from . import flashapp, flashisp, readreg, status, sync_trigger, writereg
 
 
 def usage():
@@ -15,8 +15,11 @@ def usage():
     print(f"  sync_trigger")
     print(f"  writereg")
 
-if __name__ == "__main__":
+def main():
     # get the first argument
+    if len(sys.argv) < 2:
+        usage()
+        sys.exit(1)
     first_arg = sys.argv[1]
     if first_arg in ["readreg", "flashisp", "flashapp", "status", "sync_trigger", "writereg"]:
         # remove the first argument
@@ -36,3 +39,6 @@ if __name__ == "__main__":
     else:
         usage()
         sys.exit(1)
+
+if __name__ == "__main__":
+    main()

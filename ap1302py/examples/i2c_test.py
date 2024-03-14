@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 
 from time import sleep
-import gsi2c
+from ..  import gsi2c
 
 
 def main():

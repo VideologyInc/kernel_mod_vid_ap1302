@@ -4,7 +4,8 @@
 from periphery import I2C
 from time import sleep
 import datetime
-import gsi2c
+import os
+from . import gsi2c
 import argparse
 
 
@@ -100,18 +101,12 @@ def main():
     parser.add_argument('-n', dest='nvmblocknr', metavar='nvmblocknr', type=int, default=99, help='write nvm block: 0=userreg, 1=usercal, 2=factoryreg, 3=factorycal, 99=all')
     parser.add_argument('-p',  dest='password', metavar='password', type=lambda x: int(x,0), default=0, help='pasword in case of writing to factory space')
     parser.add_argument('-D', dest='dummy', action='store_true', help='Dummy I2C ransfers')
-    parser.add_argument('-i', dest='iic', metavar='iic',type=int, default=0, help='i2c bus 0 or 1')
+    parser.add_argument('-i', dest='iic', metavar='iic',type=lambda p: p if os.path.exists(p) else FileNotFoundError(p), default='/dev/i2c0', help='i2c dev path')
     args = parser.parse_args()
 
     gsi2c.dummy(args.dummy)
 
-    if args.iic == 0:
-        gsi2c.i2c = I2C("/dev/links/csi0_i2c")
-    elif args.iic == 1:
-        gsi2c.i2c = I2C("/dev/links/csi1_i2c")
-    else:
-        print("wrong i2c bus!\n")
-        return
+    gsi2c.i2c = I2C(args.iic)
 
     # in case of write read from file
     if(args.writenvm):

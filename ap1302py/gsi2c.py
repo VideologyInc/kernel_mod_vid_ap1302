@@ -6,7 +6,7 @@ from time import sleep
 
 # use logger because print wont work for apps run without a shell env
 
-i2c = I2C("/dev/links/csi0_i2c")
+i2c = None
 #i2c = I2C("/dev/links/csi1_i2c")
 
 _maxretries = 150
@@ -48,7 +48,7 @@ def tranfer(msgs):
     if _dummy == False:
         while (retries < _maxretries):
             try:
-                err = i2c.transfer(0x38, msgs)
+                err = self.transfer(0x38, msgs)
             except:
                 dprint("%d "%(retries))
             if(err == None): break
@@ -72,7 +72,7 @@ def i2ccheck():
     if _dummy == False:
         while (retries < 100): # max 10 seconds
             try:
-                err = i2c.transfer(0x38)
+                err = self.transfer(0x38)
             except:
                 dprint("%d "%(retries))
             if(err == None): break
@@ -248,7 +248,7 @@ def check():
     msgs = I2C.Message([0], read=False)
     while (retries < 100): # max 10 seconds
         try:
-            err = i2c.transfer(0x38)
+            err = self.transfer(0x38)
         except:
             dprint("%d "%(retries))
         print(". " ,end="",flush=True)

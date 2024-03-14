@@ -4,7 +4,7 @@
 from periphery import I2C
 import os, sys, struct
 from time import sleep
-import gsi2c
+from . import gsi2c
 import argparse
 
 
@@ -74,18 +74,12 @@ def main():
     parser.add_argument('-a', dest='writeapp', action='store_true', help='Write app only')
     parser.add_argument('-n', dest='writenvm', action='store_true', help='Write nvm only')
     parser.add_argument('-D', dest='dummy', action='store_true', help='Dummy I2C ransfers')
-    parser.add_argument('-i', dest='iic', metavar='iic',type=int, default=0, help='i2c bus 0 or 1')
+    parser.add_argument('-i', dest='iic', metavar='iic',type=lambda p: p if os.path.exists(p) else FileNotFoundError(p), default='/dev/i2c0', help='i2c dev path')
     args = parser.parse_args()
 
     gsi2c.dummy(args.dummy)
 
-    if args.iic == 0:
-        gsi2c.i2c = I2C("/dev/links/csi0_i2c")
-    elif args.iic == 1:
-        gsi2c.i2c = I2C("/dev/links/csi1_i2c")
-    else:
-        print("wrong i2c bus!\n")
-        return
+    gsi2c.i2c = I2C(args.iic)
 
     appsize, mybytebuff = readfile(args.filename)
     gsi2c.set_password(args.password) # set the password to update
