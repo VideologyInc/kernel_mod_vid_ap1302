@@ -22,6 +22,7 @@
 #include <media/v4l2-event.h>
 #include <media/v4l2-fwnode.h>
 #include <media/v4l2-subdev.h>
+#include <linux/version.h>
 
 #include "cam_ar0234.h"
 #include "gs_ap1302.h"
@@ -1519,7 +1520,11 @@ static const struct regmap_config sensor_regmap_config = {
 	.cache_type = REGCACHE_NONE,
 };
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 3, 0)
 static int gs_ar0234_probe(struct i2c_client *client)
+#else
+static int gs_ar0234_probe(struct i2c_client *client, const struct i2c_device_id *id)
+#endif
 {
 	struct device *dev = &client->dev;
 	struct fwnode_handle *endpoint;
@@ -1656,7 +1661,11 @@ entity_cleanup:
 	return ret;
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 0, 0)
+static int gs_ar0234_remove(struct i2c_client *client)
+#else
 static void gs_ar0234_remove(struct i2c_client *client)
+#endif
 {
 	struct v4l2_subdev *sd = i2c_get_clientdata(client);
 	struct gs_ar0234_dev *sensor = to_gs_ar0234_dev(sd);
@@ -1664,7 +1673,9 @@ static void gs_ar0234_remove(struct i2c_client *client)
 	v4l2_async_unregister_subdev(&sensor->sd);
 	media_entity_cleanup(&sensor->sd.entity);
 	mutex_destroy(&sensor->lock);
-
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 0, 0)
+	return 0;
+#endif
 }
 
 static const struct i2c_device_id gs_ar0234_id[] = {
@@ -1681,11 +1692,12 @@ MODULE_DEVICE_TABLE(of, gs_ar0234_dt_ids);
 
 static struct i2c_driver gs_ar0234_i2c_driver = {
 	.driver = {
+		.owner = THIS_MODULE,
 		.name  = "gs_ar0234",
 		.of_match_table	= gs_ar0234_dt_ids,
 	},
 	.id_table = gs_ar0234_id,
-	.probe_new = gs_ar0234_probe,
+	.probe = gs_ar0234_probe,
 	.remove   = gs_ar0234_remove,
 };
 
