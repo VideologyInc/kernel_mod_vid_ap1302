@@ -1,4 +1,3 @@
-// SPDX-License-Identifier: GPL-2.0-or-later
 /*
  * Copyright (C) 2023 Videology Inc, Inc. All Rights Reserved.
  */
@@ -223,18 +222,18 @@ int gs_ar0234_write_reg32(struct gs_ar0234_dev *sensor, u8 addr, u32 val)
 int gs_ar0234_power(struct gs_ar0234_dev *sensor, int on)
 {
 	int ret;
-	int timeout = 0;
-	if(on)
+	int timeout = 0; 
+	if(on) 
 	{
 		ret = gs_ar0234_write_reg8(sensor, GS_REG_POWER, 0); //power up
 		if(ret) return ret;
-
+	
 		// wait for camera to boot up and accept i2c commands
 		msleep(100); // wait a bit for camera to start
 		//msleep(2000);
-		while(timeout < 5000) // 5 seconds
+		while(timeout < 5000) // 5 seconds 
 		{
-			if (gs_ar0234_check8(sensor) < 0  ) // check if I2C is fail
+			if (gs_ar0234_check8(sensor) < 0  ) // check if I2C is fail 
 			{
 				timeout += 250; // in steps of 250 ms
 				msleep(250);
@@ -242,7 +241,7 @@ int gs_ar0234_power(struct gs_ar0234_dev *sensor, int on)
 			else break; //exit
 		}
 	}
-	else
+	else 
 	{
 		ret = gs_ar0234_write_reg8(sensor, GS_REG_POWER, 1); // power down
 	}

@@ -1,4 +1,3 @@
-// SPDX-License-Identifier: GPL-2.0-or-later
 /*
  * Copyright (C) 2023 Videology Inc, Inc. All Rights Reserved.
  */
@@ -265,8 +264,23 @@ static int gs_ar0234_s_ctrl(struct v4l2_ctrl *ctrl)
 		dev_dbg_ratelimited(sd->dev, "%s: set white balance temperature to %d K\n", __func__, ctrl->val);
 		break;
 	case V4L2_CID_AUTO_N_PRESET_WHITE_BALANCE:
+		if(ctrl->val == V4L2_WHITE_BALANCE_MANUAL)
+		{ 
+			if (sensor->ctrls.auto_wb->cur.val == 0) // if WB is disabled
+			{
+				ret = gs_ar0234_write_reg8(sensor, GS_REG_WHITEBALANCE, 0x00); // Control AWB manualy using X, Y parameters
+				dev_dbg_ratelimited(sd->dev, "%s: set white balance temperature to Manual\n", __func__);
+			}
+		}
+		else 
+		{
+			if (sensor->ctrls.auto_wb->cur.val == 0) // if WB is disabled
+			{
+				ret = gs_ar0234_write_reg8(sensor, GS_REG_WHITEBALANCE, 0x07); // Control AWB using temperature
+			}
+		}
 		switch(ctrl->val) {
-			//case V4L2_WHITE_BALANCE_MANUAL: 		val = 0; break;
+			case V4L2_WHITE_BALANCE_MANUAL: 		val = 0; break;
 			//case V4L2_WHITE_BALANCE_AUTO: 		val = 0; break;
 			case V4L2_WHITE_BALANCE_INCANDESCENT: 	val = 3000; break;
 			case V4L2_WHITE_BALANCE_FLUORESCENT: 	val = 4000; break;
@@ -284,6 +298,14 @@ static int gs_ar0234_s_ctrl(struct v4l2_ctrl *ctrl)
 		break;
 	case V4L2_CID_BLUE_BALANCE: // Blue gain in manual WB
 		break;
+	case V4L2_CID_AWB_MAN_X:
+		ret = gs_ar0234_write_reg16(sensor, GS_REG_AWB_MAN_X, ctrl->val);
+		dev_dbg_ratelimited(sd->dev, "%s: set white balance manual X to %d \n", __func__, ctrl->val);
+		break;	
+	case V4L2_CID_AWB_MAN_Y:
+		ret = gs_ar0234_write_reg16(sensor, GS_REG_AWB_MAN_Y, ctrl->val);
+		dev_dbg_ratelimited(sd->dev, "%s: set white balance manual Y to %d \n", __func__, ctrl->val);
+		break;	
 	case V4L2_CID_GAMMA:
 		ret = gs_ar0234_write_reg16(sensor, GS_REG_GAMMA, ctrl->val);
 		dev_dbg_ratelimited(sd->dev, "%s: set gamma to %d\n", __func__, ctrl->val);
@@ -751,15 +773,21 @@ static int gs_ar0234_i_cntrl(struct gs_ar0234_dev *sensor)
 
 	ret = gs_ar0234_read_reg16(sensor, GS_REG_WB_TEMPERATURE, &uval);
 	if (ret < 0) return ret;
-	if(( uval> 2500) && (uval < 3500)) sensor->ctrls.wb_preset->cur.val = V4L2_WHITE_BALANCE_INCANDESCENT;
-	else if(( uval> 2500) && (uval < 3500)) sensor->ctrls.wb_preset->cur.val = V4L2_WHITE_BALANCE_INCANDESCENT;
-	else if(( uval> 3500) && (uval < 4500)) sensor->ctrls.wb_preset->cur.val = V4L2_WHITE_BALANCE_FLUORESCENT;
-	else if(( uval> 4500) && (uval < 5000)) sensor->ctrls.wb_preset->cur.val = V4L2_WHITE_BALANCE_FLUORESCENT_H;
-	else if(( uval> 5000) && (uval < 6000)) sensor->ctrls.wb_preset->cur.val = V4L2_WHITE_BALANCE_HORIZON;
-	else if(( uval> 6000) && (uval < 7000)) sensor->ctrls.wb_preset->cur.val = V4L2_WHITE_BALANCE_DAYLIGHT;
+	if( uval == 0 )  sensor->ctrls.wb_preset->cur.val = V4L2_WHITE_BALANCE_MANUAL;
+	else if(( uval > 2500) && (uval < 3500)) sensor->ctrls.wb_preset->cur.val = V4L2_WHITE_BALANCE_INCANDESCENT;
+	else if(( uval > 3500) && (uval < 4500)) sensor->ctrls.wb_preset->cur.val = V4L2_WHITE_BALANCE_FLUORESCENT;
+	else if(( uval > 4500) && (uval < 5000)) sensor->ctrls.wb_preset->cur.val = V4L2_WHITE_BALANCE_FLUORESCENT_H;
+	else if(( uval > 5000) && (uval < 6000)) sensor->ctrls.wb_preset->cur.val = V4L2_WHITE_BALANCE_HORIZON;
+	else if(( uval > 6000) && (uval < 7000)) sensor->ctrls.wb_preset->cur.val = V4L2_WHITE_BALANCE_DAYLIGHT;
 	//else if(( uval> 5400) && (uval < 5600)) sensor->ctrls.wb_preset->cur.val = V4L2_WHITE_BALANCE_FLASH;
-	else if(( uval> 7000) && (uval < 8000)) sensor->ctrls.wb_preset->cur.val = V4L2_WHITE_BALANCE_CLOUDY;
-	else if(( uval> 8000) && (uval < 10000)) sensor->ctrls.wb_preset->cur.val = V4L2_WHITE_BALANCE_SHADE;
+	else if(( uval > 7000) && (uval < 8000)) sensor->ctrls.wb_preset->cur.val = V4L2_WHITE_BALANCE_CLOUDY;
+	else if(( uval > 8000) && (uval < 10000)) sensor->ctrls.wb_preset->cur.val = V4L2_WHITE_BALANCE_SHADE;
+
+	ret = gs_ar0234_read_reg16(sensor, GS_REG_AWB_MAN_X, (u16 *) &sensor->ctrls.awb_man_x->cur.val);
+	if (ret < 0) return ret;
+
+	ret = gs_ar0234_read_reg16(sensor, GS_REG_AWB_MAN_Y, (u16 *) &sensor->ctrls.awb_man_y->cur.val);
+	if (ret < 0) return ret;
 
 	ret = gs_ar0234_read_reg8(sensor, GS_REG_MIRROR_FLIP, &uval8);
 	if (ret < 0) return ret;
@@ -1088,6 +1116,29 @@ static const struct v4l2_ctrl_config face_max_size = {
 		.def = 0x4000,
 };
 
+static const struct v4l2_ctrl_config awb_man_x = {
+		.ops = &gs_ar0234_ctrl_ops,
+        .id = V4L2_CID_AWB_MAN_X,
+        .name = "AWB manual X",
+        .type = V4L2_CTRL_TYPE_INTEGER,
+        .flags = V4L2_CTRL_FLAG_SLIDER,
+		.min = -32768,
+        .max = 32767,
+        .step = 1,
+		.def = 0x0000,
+};
+static const struct v4l2_ctrl_config awb_man_y = {
+		.ops = &gs_ar0234_ctrl_ops,
+        .id = V4L2_CID_AWB_MAN_Y,
+        .name = "AWB manual Y",
+        .type = V4L2_CTRL_TYPE_INTEGER,
+        .flags = V4L2_CTRL_FLAG_SLIDER,
+		.min = -32768,
+        .max = 32767,
+        .step = 1,
+		.def = 0x0000,
+};
+
 static const struct v4l2_ctrl_config store_registers = {
 		.ops = &gs_ar0234_ctrl_ops,
         .id = V4L2_CID_STORE_REGISTERS,
@@ -1157,7 +1208,9 @@ static int gs_ar0234_init_controls(struct gs_ar0234_dev *sensor)
 	ctrls->auto_wb = v4l2_ctrl_new_std(hdl, ops, V4L2_CID_AUTO_WHITE_BALANCE, 0, 1, 1, 1);
 	ctrls->push_to_white = v4l2_ctrl_new_std(hdl, ops, V4L2_CID_DO_WHITE_BALANCE, 0, 0, 0, 0);
 	ctrls->wb_temp = v4l2_ctrl_new_std(hdl, ops, V4L2_CID_WHITE_BALANCE_TEMPERATURE , 0, 0xFFFF, 1, 6500);
-	ctrls->wb_preset = v4l2_ctrl_new_std_menu(hdl, ops, V4L2_CID_AUTO_N_PRESET_WHITE_BALANCE, V4L2_WHITE_BALANCE_SHADE, 0x3, V4L2_WHITE_BALANCE_DAYLIGHT);
+	ctrls->wb_preset = v4l2_ctrl_new_std_menu(hdl, ops, V4L2_CID_AUTO_N_PRESET_WHITE_BALANCE, V4L2_WHITE_BALANCE_SHADE, 0x2, V4L2_WHITE_BALANCE_DAYLIGHT);
+	ctrls->awb_man_x = v4l2_ctrl_new_custom(hdl, &awb_man_x, NULL);
+	ctrls->awb_man_y = v4l2_ctrl_new_custom(hdl, &awb_man_y, NULL);
 
 	/* auto/manual exposure*/
 	ctrls->auto_exp = v4l2_ctrl_new_std_menu(hdl, ops, V4L2_CID_EXPOSURE_AUTO, V4L2_EXPOSURE_APERTURE_PRIORITY, 0, V4L2_EXPOSURE_AUTO);
