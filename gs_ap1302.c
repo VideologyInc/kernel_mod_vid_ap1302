@@ -251,12 +251,34 @@ int gs_ar0234_power(struct gs_ar0234_dev *sensor, int on)
 
 #if 0
 
-int gs_ar0234_check_wait(struct gs_ar0234_dev *sensor, u16 wait, u16 timeout)
+int gs_check(struct gs_ar0234_dev *sensor)
+{
+	struct i2c_client *client = sensor->i2c_client;
+	struct i2c_msg msg[2];
+	u8 buf[1];
+	int ret;
+
+	buf[0] = 0x00;
+
+	msg[0].addr = client->addr;
+	msg[0].flags = client->flags;
+	msg[0].buf = buf;
+	msg[0].len = 0;
+
+	ret = gs_ar0234_i2c_trx_retry(client->adapter, msg, 1);
+	if (ret < 0) {
+		dev_err(&client->dev, "%s: error: addr=%x, err=%d\n", __func__, addr, ret);
+		return ret;
+	}
+	return 0;
+}
+
+int gs_check_wait(struct gs_ar0234_dev *sensor, u16 wait, u16 timeout)
 {
 	int ret;
 	u16 to=0;
 
-	ret = gs_ar0234_check8(sensor);
+	ret = gs_check(sensor);
 	while(ret != 0) 
 	{
 		to += wait;
@@ -265,7 +287,7 @@ int gs_ar0234_check_wait(struct gs_ar0234_dev *sensor, u16 wait, u16 timeout)
 			return -1;
 		}
 		mssleep(wait);
-		ret = gs_ar0234_check8(sensor);
+		ret = gs_check(sensor);
 	}
 	return 0;
 }
@@ -313,6 +335,10 @@ int restart(struct gs_ar0234_dev *sensor)
 	if (ret) return ret;
 	return 0;
 }
+
+/**
+ *  NVM
+ */
 
 int gs_read_nvm(struct gs_ar0234_dev *sensor, u8 page, u8 addr, u8 size, u8 * buf)
 {
@@ -379,6 +405,10 @@ int gs_ar0234_write_nvm(struct gs_ar0234_dev *sensor, u8 page, u8 addr, u8 size,
 	return 0;
 }
 
+/** 
+ * ISP - SPI Flash
+ */
+
 int gs_isp_write(struct gs_ar0234_dev *sensor, u32 addr, u8 size, u8 * buf)
 {
 	struct i2c_client *client = sensor->i2c_client;
@@ -441,7 +471,7 @@ int gs_isp_calc_crc(struct gs_ar0234_dev *sensor, u32 addr1, u32 addr2, u16 * cr
 		return ret;
 	}
 
-	ret = gs_ar0234_check_wait(sensor, 10, 100) //check in steps of 10ms, with timeout of 100ms
+	ret = gs_check_wait(sensor, 10, 100) //check in steps of 10ms, with timeout of 100ms
 	if(ret < 0) {
 		dev_err(&client->dev, "%s: error: crc timeout, err=%d\n", __func__, ret);
 		return ret;
@@ -485,7 +515,7 @@ int gs_isp_erase_page(struct gs_ar0234_dev *sensor, u32 addr)
 		return ret;
 	}
 
-	ret = gs_ar0234_check_wait(sensor, 10, 1000) //check in steps of 10ms, with timeout of 1000ms
+	ret = gs_check_wait(sensor, 10, 1000) //check in steps of 10ms, with timeout of 1000ms
 	if(ret < 0) {
 		dev_err(&client->dev, "%s: error: crc timeout, err=%d\n", __func__, ret);
 		return ret;
@@ -575,8 +605,6 @@ int gs_get_spistatus(struct gs_ar0234_dev *sensor, u16 * status)
 	u8 mybuf[0];
 	int ret;
 
-	if((cmd != 0x9F) || (cmd != 0x90)) return -1;
-	
 	mybuf[0] = 0x45;
 	mybuf[1] = 0;
 
@@ -600,5 +628,283 @@ int gs_get_spistatus(struct gs_ar0234_dev *sensor, u16 * status)
 	return 0;
 }
 
+/**
+ * MainApp - bootloader
+ */
+ 
+ int gs_flashread(struct gs_ar0234_dev *sensor, u16 addr, u8 size, u8 * buf)
+ {
+	struct i2c_client *client = sensor->i2c_client;
+	struct i2c_msg msg[2];
+	u8 mybuf[4];
+	int ret;
+	
+	if ((size != 16) && (size != 32) || (size != 64)) return -1;
+
+	mybuf[0] = 0x39;
+	mybuf[1] = (u8) (addr & 0xFF);
+	mybuf[2] = (u8) ((addr >> 8) & 0xFF);
+	mybuf[3] = size;
+
+	msg[0].addr = client->addr;
+	msg[0].flags = client->flags;
+	msg[0].buf = mybuf;
+	msg[0].len = sizeof(mybuf);
+
+	msg[1].addr = client->addr;
+	msg[1].flags = client->flags | I2C_M_RD;
+	msg[1].buf = buf;
+	msg[1].len = size;
+	ret = gs_ar0234_i2c_trx_retry(client->adapter, msg, 2);
+	if (ret < 0) {
+		dev_err(&client->dev, "%s: error: addr=%x, err=%d\n", __func__, addr, ret);
+		return ret;
+	}
+	return 0;
+ }
+
+int gs_flashwrite(struct gs_ar0234_dev *sensor, u16 addr, u8 size, u8 * buf)
+ {
+	struct i2c_client *client = sensor->i2c_client;
+	struct i2c_msg msg;
+	u8 * mybuf;
+	int ret;
+
+	if ((size != 16) && (size != 32) || (size != 64)) return -1;
+
+	mybuf = (u8 *) malloc(sizeof(u8) * (size+4));
+	mybuf[0] = 0x38;
+	mybuf[1] = (u8) (addr & 0xFF);
+	mybuf[2] = (u8) ((addr >> 8) & 0xFF);
+	mybuf[3] = size;
+
+	for (int i=0; i<size; i++)
+	{
+		mybuf[i+4] = buf[i];
+	}
+
+	msg.addr = client->addr;
+	msg.flags = client->flags;
+	msg.buf = mybuf;
+	msg.len = sizeof(mybuf);
+
+	ret = gs_ar0234_i2c_trx_retry(client->adapter, &msg, 1);
+	if (ret < 0) {
+		dev_err(&client->dev, "%s: error: addr=%x, err=%d\n", __func__, addr, ret);
+		free(mybuf);
+		return ret;
+	}
+	free(mybuf);
+	return 0;
+
+ }
+
+int gs_page_erase(struct gs_ar0234_dev *sensor, u16 addr, u16 size)
+{
+	struct i2c_client *client = sensor->i2c_client;
+	struct i2c_msg msg;
+	u8 buf[5];
+	int ret;
+
+	if(size > FLASH_PAGE_SIZE) return -1; //bootloader bug!
+
+	buf[0] = 0x44;
+	buf[1] = (u8) (addr & 0xFF);
+	buf[2] = (u8) ((addr >> 8) & 0xFF);
+	buf[3] = (u8) (size & 0xFF);
+	buf[3] = (u8) ((size >> 8) & 0xFF);
+
+	msg.addr = client->addr;
+	msg.flags = client->flags;
+	msg.buf = buf;
+	msg.len = sizeof(buf);
+
+	ret = gs_ar0234_i2c_trx_retry(client->adapter, &msg, 1);
+	if (ret < 0) {
+		dev_err(&client->dev, "%s: error: addr=%x, err=%d\n", __func__, addr, ret);
+		return ret;
+	}
+
+	return 0;
+}
+
+int gs_app_calc_crc(struct gs_ar0234_dev *sensor, u16 * pcrc)
+{
+	struct i2c_client *client = sensor->i2c_client;
+	struct i2c_msg msg;
+	u8 mybuf[0];
+	int ret;
+	
+	mybuf[0] = 0x41;
+	mybuf[1] = 0x00;
+
+	msg.addr = client->addr;
+	msg.flags = client->flags;
+	msg.buf = mybuf;
+	msg.len = sizeof(mybuf);
+
+	ret = gs_ar0234_i2c_trx_retry(client->adapter, msg, 1);
+	if (ret < 0) {
+		dev_err(&client->dev, "%s: error: err=%d\n", __func__, ret);
+		return ret;
+	}
+
+	ret = gs_check_wait(sensor, 10, 100) //check in steps of 10ms, with timeout of 100ms
+	if(ret < 0) {
+		dev_err(&client->dev, "%s: error: crc timeout, err=%d\n", __func__, ret);
+		return ret;
+	}
+
+	msg.addr = client->addr;
+	msg.flags = client->flags | I2C_M_RD;
+	msg.buf = mybuf;
+	msg.len = 2;
+
+	ret = gs_ar0234_i2c_trx_retry(client->adapter, msg, 1);
+	if (ret < 0) {
+		dev_err(&client->dev, "%s: error: err=%d\n", __func__, ret);
+		return ret;
+	}
+
+	*pcrc = ((u16) mybuf[0]) | (((u16) mybuf[1]) << 8);
+	return 0;
+}
+
+int gs_app_read_crc(struct gs_ar0234_dev *sensor, u16 * pcrc)
+{
+	return gs_flashread(sensor,FLASH_APP_CRC_ADDRESS, 2, &0pcrc);
+}
+
+int gs_app_read_size(struct gs_ar0234_dev *sensor, u16 * psize)
+{
+	return gs_flashread(sensor,FLASH_APP_SIZE_ADDRESS, 2, psize);
+}
+
+int gs_app_write_size(struct gs_ar0234_dev *sensor, u16 size)
+{
+	u8 buf[2];
+
+	buf[0] = (u8) (size & 0xFF);
+	buf[1] = (u8) ((size >> 8) & 0xFF);
+	return gs_flashwrite(sensor, FLASH_APP_SIZE_ADDRESS, 2, buf);
+}
+
+int gs_app_write_crc(struct gs_ar0234_dev *sensor, u16 crc)
+{
+	u8 buf[2];
+
+	buf[0] = (u8) (crc & 0xFF);
+	buf[1] = (u8) ((crc >> 8) & 0xFF);
+	return gs_flashwrite(sensor, FLASH_APP_CRC_ADDRESS, 2, buf);
+}
+
+int gs_app_erase_crc(struct gs_ar0234_dev *sensor)
+{
+	gs_erase_page(sensor,FLASH_APP_CRC_ADDRESS,2);
+}
+
+int gs_app_erase_size(struct gs_ar0234_dev *sensor)
+{
+	gs_erase_page(sensor,FLASH_APP_SIZE_ADDRESS,2);
+}
+
+int gs_erase_app(struct gs_ar0234_dev *sensor)
+{
+	for (int n = FLASH_APP_START_ADDRESS, n < FLASH_APP_MAX; n += FLASH_PAGE_SIZE)
+	{
+        gs_erase_page(sensor, n, FLASH_PAGE_SIZE);
+	}
+}
+
+int gs_erase_nvm(struct gs_ar0234_dev *sensor)
+{
+	for (int n = FLASH_NVM_START_ADDRESS, n < FLASH_NVM_MAX; n += FLASH_PAGE_SIZE)
+	{
+        gs_erase_page(sensor, n, FLASH_PAGE_SIZE);
+	}
+}
+
+int gs_erase_all(struct gs_ar0234_dev *sensor)
+
+{
+	struct i2c_client *client = sensor->i2c_client;
+	struct i2c_msg msg;
+	u8 buf[2];
+	int ret;
+
+	if(size > FLASH_PAGE_SIZE) return -1; //bootloader bug!
+
+	buf[0] = 0x44;
+	buf[1] = 0x01;
+
+	msg.addr = client->addr;
+	msg.flags = client->flags;
+	msg.buf = buf;
+	msg.len = sizeof(buf);
+
+	ret = gs_ar0234_i2c_trx_retry(client->adapter, &msg, 1);
+	if (ret < 0) {
+		dev_err(&client->dev, "%s: error: addr=%x, err=%d\n", __func__, addr, ret);
+		return ret;
+	}
+
+	return 0;
+}
+
+int gs_reboot(struct gs_ar0234_dev *sensor)
+{
+	struct i2c_client *client = sensor->i2c_client;
+	struct i2c_msg msg;
+	u8 buf[2];
+	int ret;
+
+	if(size > FLASH_PAGE_SIZE) return -1; //bootloader bug!
+
+	buf[0] = 0x46;
+	buf[1] = 0x01;
+
+	msg.addr = client->addr;
+	msg.flags = client->flags;
+	msg.buf = buf;
+	msg.len = sizeof(buf);
+
+	ret = gs_ar0234_i2c_trx_retry(client->adapter, &msg, 1);
+	if (ret < 0) {
+		dev_err(&client->dev, "%s: error: addr=%x, err=%d\n", __func__, addr, ret);
+		return ret;
+	}
+
+	return 0;
+}
+
+int gs_boot_id(struct gs_ar0234_dev *sensor, u16 * id)
+{
+	struct i2c_client *client = sensor->i2c_client;
+	struct i2c_msg msg[2];
+	u8 mybuf[0];
+	int ret;
+
+	mybuf[0] = 0x47;
+	mybuf[1] = 0x00;
+
+	msg[0].addr = client->addr;
+	msg[0].flags = client->flags;
+	msg[0].buf = mybuf;
+	msg[0].len = 1;
+
+	msg[1].addr = client->addr;
+	msg[1].flags = client->flags | I2C_M_RD;
+	msg[1].buf = mybuf;
+	msg[1].len = 2;
+
+	ret = gs_ar0234_i2c_trx_retry(client->adapter, msg, 2);
+	if (ret < 0) {
+		dev_err(&client->dev, "%s: error: err=%d\n", __func__, ret);
+		return ret;
+	}
+
+	*id = ((u16)mybuf[1] << 8) | mybuf[0];
+	return 0;
+}
 
 #endif
