@@ -1,5 +1,5 @@
-# scailx_2gs234_v4l
-V4L driver of the 2GS234 camera for SCAILX
+# Kernel V4L2 module and python helpers for Videology AP1302 based camera modules.
 
 Note: this module is valid only for Linux kernels > 5.12
+
 
