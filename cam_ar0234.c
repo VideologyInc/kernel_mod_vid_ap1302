@@ -12,6 +12,7 @@
 #include <linux/regmap.h>
 #include <linux/of_device.h>
 #include <linux/of_gpio.h>
+#include <linux/firmware.h>
 #include <linux/pinctrl/consumer.h>
 #include <linux/slab.h>
 #include <linux/types.h>
@@ -26,6 +27,16 @@
 
 #include "cam_ar0234.h"
 #include "gs_ap1302.h"
+#include "gs_image_update.h"
+
+#define MCU_FIRMWARE_VERSION 0x0019
+#define NVM_FIRMWARE_VERSION 0x0001
+#define ISP_FIRMWARE_VERSION 442
+
+#define MCU_FIRWARE_NAME "SFT-23361_mcu.img"
+#define NVM_FIRWARE_NAME "SFT-23363_nvm.img"
+//#define NVM_FIRWARE_NAME "SFT-23361_mcu.img"
+#define ISP_FIRWARE_NAME "SFT-23366_isp.img"
 
 
 static int gs_ar0234_i_cntrl(struct gs_ar0234_dev *sensor);
@@ -102,6 +113,27 @@ static int gs_ar0234_upcall(struct gs_ar0234_dev *sensor, char *call_str)
 	return 0;
 }
 #endif
+
+#if 0
+static int print_upcall(char * print_str)
+{
+	char *argv[5], *envp[5];
+
+	argv[0] = "/bin/echo.coreutils";
+	argv[1] = print_str;
+	argv[2] = ">>";
+	argv[3] = "/home/root/gs0234_feature/log.txt";
+	argv[4] = NULL;
+
+	envp[0] = "HOME=/home/root/";
+	envp[1] = "PATH=/sbin:/bin:/usr/sbin:/usr/bin";
+	envp[2] = NULL;
+
+	call_usermodehelper(argv[0], argv, envp, UMH_WAIT_EXEC);
+	return 0;
+}
+#endif
+
 
 #if 0
 static void gs_ar0234_power(struct gs_ar0234_dev *sensor, int enable)
@@ -904,7 +936,6 @@ static const struct v4l2_ctrl_config exposure_upper = {
         .step = 1,
 		.def = 333,
 };
-
 static const struct v4l2_ctrl_config exposure_max = {
 	    .ops = &gs_ar0234_ctrl_ops,
         .id = V4L2_CID_EXPOSURE_MAX,
@@ -916,7 +947,6 @@ static const struct v4l2_ctrl_config exposure_max = {
         .step = 1,
 		.def = 333,
 };
-
 static const struct v4l2_ctrl_config gain_upper = {
 	    .ops = &gs_ar0234_ctrl_ops,
         .id = V4L2_CID_GAIN_UPPER,
@@ -928,7 +958,6 @@ static const struct v4l2_ctrl_config gain_upper = {
         .step = 1,
 		.def = 0x0800,
 };
-
 static const struct v4l2_ctrl_config gain_max = {
 		.ops = &gs_ar0234_ctrl_ops,
         .id = V4L2_CID_GAIN_MAX,
@@ -1520,6 +1549,51 @@ static const struct regmap_config sensor_regmap_config = {
 	.cache_type = REGCACHE_NONE,
 };
 
+
+static void gs_ar0234_remove(struct i2c_client *client);
+
+/*
+ * Work in progress
+ */
+static void gs_ar0234_fw_handler(const struct firmware *fw, void *context)
+{
+	int ret;
+	struct gs_ar0234_dev *sensor = (struct gs_ar0234_dev *)context;
+
+	if (!fw)
+		return;
+
+	mutex_lock(&sensor->lock);
+	ret = flashapp(sensor, (char *) fw->data, fw->size, NVM);
+	//print_hex_dump(KERN_ALERT, "", DUMP_PREFIX_OFFSET, 16, 1, fw->data, 100, 1);
+	//write_lines((char *) fw->data, fw->size);
+#if 0
+	ret = crosslink_fpga_ops_write_init(sensor->reset_gpio, sensor->i2c_client);
+	if (ret < 0)
+		goto exit;
+	ret = crosslink_fpga_ops_write(sensor->i2c_client, fw->data, fw->size);
+	if (ret < 0)
+		goto exit;
+	ret = crosslink_fpga_ops_write_complete(sensor->i2c_client);
+	if (ret < 0)
+		goto exit;
+#endif
+	if(ret < 0)
+		goto exit;
+
+	sensor->firmware_loaded = 1;
+exit:
+	release_firmware(fw);
+	mutex_unlock(&sensor->lock);
+	if (ret < 0) {
+		dev_err(sensor->dev, "Failed to load firmware: %d\n", ret);
+		 gs_ar0234_remove(sensor->i2c_client);
+	}
+}
+
+
+
+
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 3, 0)
 static int gs_ar0234_probe(struct i2c_client *client)
 #else
@@ -1531,7 +1605,7 @@ static int gs_ar0234_probe(struct i2c_client *client, const struct i2c_device_id
 	struct gs_ar0234_dev *sensor;
 	struct v4l2_mbus_framefmt *fmt;
 	int ret;
-	//unsigned int id_code;
+	u16 id_code;
 
 	pr_debug("-->%s gs_ar0234 Probe start\n",__func__);
 
@@ -1577,7 +1651,7 @@ static int gs_ar0234_probe(struct i2c_client *client, const struct i2c_device_id
 		return ret;
 	}
 
-	pr_debug("%s: sensor->ep.bus_type=%d\n", __func__, sensor->ep.bus_type);
+	pr_debug("%s: 1 sensor->ep.bus_type=%d\n", __func__, sensor->ep.bus_type);
 
 	if (sensor->ep.bus_type != V4L2_MBUS_CSI2_DPHY) {
 		dev_err(dev, "Unsupported bus type %d\n", sensor->ep.bus_type);
@@ -1590,22 +1664,23 @@ static int gs_ar0234_probe(struct i2c_client *client, const struct i2c_device_id
 		return PTR_ERR(sensor->regmap);
 	}
 	sensor->i2c_client = client;
-	// ret = regmap_read(sensor->regmap, 0x1, &id_code);
-	// if (ret) {
-	// 	/* If we can't read the ID, it may be that the FPGA hasn't loaded yet after releasing reset. */
-	// 	dev_dbg(dev, "Could not read device-id. trying again\n");
-	// 	return -EPROBE_DEFER;
-	// }
-	// else {
-	// 	dev_info(dev, "Got device-id %02x\n", id_code);
+
+
+	ret = gs_ar0234_version(sensor, MCU, &id_code);
+	if (ret)
+		goto entity_cleanup;
+
+		//dev_dbg(dev, "Could not read device-id. trying again\n");
+	// if (id_code != FIRMWARE_VERSION) {
+		dev_info(dev, "Loading current Firmware: %02x\n", NVM_FIRMWARE_VERSION);
+		ret = request_firmware_nowait(THIS_MODULE, FW_ACTION_UEVENT, NVM_FIRWARE_NAME, dev, GFP_KERNEL, sensor, gs_ar0234_fw_handler);
+		if (ret) {
+			dev_err(dev, "Failed request_firmware_nowait err %d\n", ret);
+			goto entity_cleanup;
+		}
 	// }
 
-/*
-	u16 format_x = 0;
-	gs_ar0234_read_reg16(sensor, 0x12, &format_x);
-	dev_info(dev, "got format-x value: %d", format_x);
-	gs_ar0234_upcall(sensor, "global-shutter module probe");
-*/
+
 	v4l2_i2c_subdev_init(&sensor->sd, client, &gs_ar0234_subdev_ops);
 
 	sensor->sd.flags |= V4L2_SUBDEV_FL_HAS_EVENTS | V4L2_SUBDEV_FL_HAS_DEVNODE;
@@ -1630,26 +1705,19 @@ static int gs_ar0234_probe(struct i2c_client *client, const struct i2c_device_id
 
 	ret = v4l2_async_register_subdev_sensor(&sensor->sd);
 	if (ret)
-		goto entity_cleanup;
+		goto free_ctrls;
 
 	// read register values from Sensor
 	ret = gs_ar0234_i_cntrl(sensor);
 	if (ret)
-		goto entity_cleanup;
+		goto free_ctrls;
 
 	// Power down
 	ret = gs_ar0234_s_power(&sensor->sd, GS_POWER_DOWN);
 	if (ret)
-		goto entity_cleanup;
-
-	pr_debug("<--%s gs_ar0234 Probe end successful, return\n",__func__);
-	return 0;
-
-	/* weird code, never gets here */
-	ret = v4l2_async_register_subdev_sensor(&sensor->sd);
-	if (ret)
 		goto free_ctrls;
 
+	pr_debug("<--%s gs_ar0234 Probe end successful, return\n",__func__);
 	return 0;
 
 free_ctrls:
@@ -1698,7 +1766,7 @@ static struct i2c_driver gs_ar0234_i2c_driver = {
 	},
 	.id_table = gs_ar0234_id,
 	.probe = gs_ar0234_probe,
-	.remove   = gs_ar0234_remove,
+	.remove = gs_ar0234_remove,
 };
 
 module_i2c_driver(gs_ar0234_i2c_driver);
