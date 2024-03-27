@@ -9,47 +9,74 @@
 #include "cam_ar0234.h"
 #include "gs_ap1302.h"
 
+
+/*
+ * Buffer
+ */
+static u8 writebuf[68];
+
+
+/**
+ * generic
+ */
+
+void mymsleep(int wait)
+{
+	msleep(wait);
+}
+
+
 int gs_ar0234_i2c_trx_retry(struct i2c_adapter *adap, struct i2c_msg *msgs, int num)
 {
 	int i, ret;
 	for (i = 0; i < I2C_RETRIES; i++) {
 		ret = i2c_transfer(adap, msgs, num);
-		if (ret >= 0)
+		if (ret > 0)
 			break;
-		msleep(1);
 	}
 	return ret;
-	// return 0;
 }
 
-int gs_ar0234_check8(struct gs_ar0234_dev *sensor)
+int gs_check(struct gs_ar0234_dev *sensor)
 {
 	struct i2c_client *client = sensor->i2c_client;
 	struct i2c_msg msg[2];
-	u8 buf[2];
+	u8 buf[1];
 	int ret;
 
-	buf[0] = 0x31;
-	buf[1] = 0x00;
+	buf[0] = 0x00;
 
 	msg[0].addr = client->addr;
 	msg[0].flags = client->flags;
 	msg[0].buf = buf;
-	msg[0].len = sizeof(buf);
+	msg[0].len = 0;
 
-	msg[1].addr = client->addr;
-	msg[1].flags = client->flags | I2C_M_RD;
-	msg[1].buf = buf;
-	msg[1].len = 1;
-
-	ret = i2c_transfer(client->adapter, msg, 2);
-
+	ret = i2c_transfer(client->adapter, msg, 1);
 	if (ret < 0) {
-		//dev_err(&client->dev, "%s: poll8 \n", __func__);
-		return -1;
+		//dev_err(&client->dev, "%s: wait\n", __func__);
+		return ret;
 	}
 	return 0;
 }
+
+int gs_check_wait(struct gs_ar0234_dev *sensor, u16 wait, u16 timeout)
+{
+	int ret;
+	u16 to=0;
+
+	ret = gs_check(sensor);
+	while(ret != 0) 
+	{
+		ret = gs_check(sensor);
+		if (ret == 0) return 0;
+		mymsleep(wait);
+		to += wait;
+		if(to > timeout) 
+			return -1;
+	}
+	return 0;
+}
+
 
 
 /*
@@ -232,30 +259,19 @@ int gs_ar0234_write_reg32(struct gs_ar0234_dev *sensor, u8 addr, u32 val)
 int gs_ar0234_power(struct gs_ar0234_dev *sensor, int on)
 {
 	int ret;
-	int timeout = 0; 
 	if(on) 
 	{
 		ret = gs_ar0234_write_reg8(sensor, GS_REG_POWER, 0); //power up
 		if(ret) return ret;
-	
 		// wait for camera to boot up and accept i2c commands
-		msleep(100); // wait a bit for camera to start
-		//msleep(2000);
-		while(timeout < 5000) // 5 seconds 
-		{
-			if (gs_ar0234_check8(sensor) < 0  ) // check if I2C is fail 
-			{
-				timeout += 250; // in steps of 250 ms
-				msleep(250);
-			}
-			else break; //exit
-		}
+		mymsleep(100);
+
+		ret = gs_check_wait(sensor, 100, 5000);
 	}
 	else 
 	{
 		ret = gs_ar0234_write_reg8(sensor, GS_REG_POWER, 1); // power down
 	}
-	// pr_debug("<--%s:  timeout  = %d,  %d\n",__func__, timeout, on);
 	return ret;
 }
 
@@ -345,52 +361,31 @@ int gs_start_bootloader(struct gs_ar0234_dev *sensor)
 	return 0;
 }
 
-
-/**
- * generic
- */
-
-int gs_check(struct gs_ar0234_dev *sensor)
+int gs_upgrader_mode(struct gs_ar0234_dev *sensor)
 {
-	struct i2c_client *client = sensor->i2c_client;
-	struct i2c_msg msg[2];
-	u8 buf[1];
-	int ret;
-
-	buf[0] = 0x00;
-
-	msg[0].addr = client->addr;
-	msg[0].flags = client->flags;
-	msg[0].buf = buf;
-	msg[0].len = 0;
-
-	ret = gs_ar0234_i2c_trx_retry(client->adapter, msg, 1);
-	if (ret < 0) {
-		dev_err(&client->dev, "%s: error: err=%d\n", __func__, ret);
-		return ret;
-	}
-	return 0;
+	return gs_ar0234_write_reg8(sensor, 0xEB, 0x82);
 }
 
-int gs_check_wait(struct gs_ar0234_dev *sensor, u16 wait, u16 timeout)
+
+//#define MYDEBUG
+#ifdef MYDEBUG 
+int pd(unsigned int address, u8 * pdata, int size)
 {
-	int ret;
-	u16 to=0;
+    char str[255];
+    char * endptr;
 
-	ret = gs_check(sensor);
-	while(ret != 0) 
-	{
-		to += wait;
-		if(to > timeout) 
-		{
-			return -1;
-		}
-		msleep(wait);
-		ret = gs_check(sensor);
-	}
-	return 0;
+    sprintf(str,"%08X ",address);
+    endptr = strchr(str, (int)'\0');
+    for (int i=0; i < size; i++)
+    {
+        sprintf(endptr,"%02X ", pdata[i]); // data
+        endptr = strchr(endptr, (int)'\0');
+    }
+    sprintf(endptr,"\n");
+    printk("%s",str);
+    return 0;
 }
-
+#endif
 
 
 /**
@@ -432,31 +427,28 @@ int gs_ar0234_write_nvm(struct gs_ar0234_dev *sensor, u8 page, u8 addr, u8 size,
 {
 	struct i2c_client *client = sensor->i2c_client;
 	struct i2c_msg msg;
-	u8 * mybuf;
 	int ret;
 
 	if (size == 0) return 0;
 
-	mybuf = (u8 *) kmalloc(sizeof(u8) * (size+3), GFP_KERNEL );
-	mybuf[0] = 0x50;
-	mybuf[1] = page;
-	mybuf[2] = addr;
+	writebuf[0] = 0x50;
+	writebuf[1] = page;
+	writebuf[2] = addr;
 
 	for (int i=0; i<size; i++)
 	{
-		mybuf[i+3] = buf[i];
+		writebuf[i+3] = buf[i];
 	}
 
 	msg.addr = client->addr;
 	msg.flags = client->flags;
-	msg.buf = mybuf;
+	msg.buf = writebuf;
 	msg.len = size+3;
 
 	ret = gs_ar0234_i2c_trx_retry(client->adapter, &msg, 1);
 	if (ret < 0) {
 		dev_err(&client->dev, "%s: error: addr=%x, err=%d\n", __func__, addr, ret);
 	}
-	kfree(mybuf);
 	return 0;
 }
 
@@ -468,33 +460,51 @@ int gs_isp_write(struct gs_ar0234_dev *sensor, u32 addr, u8 size, u8 * buf)
 {
 	struct i2c_client *client = sensor->i2c_client;
 	struct i2c_msg msg;
-	u8 * mybuf;
 	int ret;
+	u16 status;
+    int timeout;
 
 	if (size == 0) return 0;
 	if (size > 64) return -1; //max size  is 64
 
-	mybuf = (u8 *) kmalloc(sizeof(u8) * (size+4), GFP_KERNEL );
-	mybuf[0] = 0x40;
-	mybuf[1] = (u8) (addr & 0xFF);
-	mybuf[2] = (u8) ((addr >> 8) & 0xFF);
-	mybuf[3] = (u8) ((addr >> 16) & 0xFF);
+#ifdef MYDEBUG
+	pd(addr, buf, size);
+#endif
+
+	writebuf[0] = 0x40;
+	writebuf[1] = (u8) (addr & 0xFF);
+	writebuf[2] = (u8) ((addr >> 8) & 0xFF);
+	writebuf[3] = (u8) ((addr >> 16) & 0xFF);
 
 	for (int i=0; i<size; i++)
 	{
-		mybuf[i+4] = buf[i];
+		writebuf[i+4] = buf[i];
 	}
 
 	msg.addr = client->addr;
 	msg.flags = client->flags;
-	msg.buf = mybuf;
+	msg.buf = writebuf;
 	msg.len = size+4;
 
 	ret = gs_ar0234_i2c_trx_retry(client->adapter, &msg, 1);
 	if (ret < 0) {
 		dev_err(&client->dev, "%s: error: addr=%x, err=%d\n", __func__, addr, ret);
 	}
-	kfree(mybuf);
+
+	timeout = 0;
+	status = 0xFFFF;
+	while (status != 0x0000) {
+		ret = gs_get_spistatus(sensor, &status);
+		if (ret < 0) {
+			dev_err(&client->dev, "%s: error: flash status %04X err=%d\n", __func__, status, ret);
+			return ret;
+		}
+		timeout ++;
+		if (timeout >= 1000) {
+			dev_err(&client->dev, "%s: error: flash write timeout %04X err=%d\n", __func__, status, ret);
+			return -1;
+		}
+	}
 	return 0;
 }
 
@@ -524,7 +534,7 @@ int gs_isp_calc_crc(struct gs_ar0234_dev *sensor, u32 addr1, u32 addr2, u16 * cr
 		return ret;
 	}
 
-	ret = gs_check_wait(sensor, 10, 100); //check in steps of 10ms, with timeout of 100ms
+	ret = gs_check_wait(sensor, 10, 1000); //check in steps of 10ms, with timeout of 100ms
 	if(ret < 0) {
 		dev_err(&client->dev, "%s: error: crc timeout, err=%d\n", __func__, ret);
 		return ret;
@@ -583,6 +593,8 @@ int gs_isp_erase_all(struct gs_ar0234_dev *sensor)
 	struct i2c_msg msg;
 	u8 buf[2];
 	int ret;
+	u16 status;
+    int timeout;	
 
 	buf[0] = 0x42;
 	buf[1] = 0x01;
@@ -597,13 +609,23 @@ int gs_isp_erase_all(struct gs_ar0234_dev *sensor)
 		dev_err(&client->dev, "%s: error: err=%d\n", __func__, ret);
 		return ret;
 	}
+	mymsleep(10);
 
-	ret = gs_check_wait(sensor, 10, 6000); //check in steps of 10ms, with timeout of 6000ms
-	if(ret < 0) {
-		dev_err(&client->dev, "%s: error: crc timeout, err=%d\n", __func__, ret);
-		return ret;
+	timeout = 0;
+	status = 0xFFFF;
+	while (status != 0x0000) {
+		ret = gs_get_spistatus(sensor, &status);
+		if (ret < 0) {
+			dev_err(&client->dev, "%s: error: flash status %04X err=%d\n", __func__, status, ret);
+			return ret;
+		}
+		timeout ++;
+		mymsleep(10);
+		if (timeout >= 1000) {
+			dev_err(&client->dev, "%s: error: flash write timeout %04X err=%d\n", __func__, status, ret);
+			return -1;
+		}
 	}
-
 	return 0;
 }
 
@@ -676,7 +698,6 @@ int gs_get_spistatus(struct gs_ar0234_dev *sensor, u16 * status)
 		dev_err(&client->dev, "%s: error: err=%d\n", __func__, ret);
 		return ret;
 	}
-
 	*status = ((u16)mybuf[1] << 8) | mybuf[0];
 	return 0;
 }
@@ -692,7 +713,7 @@ int gs_get_spistatus(struct gs_ar0234_dev *sensor, u16 * status)
 	u8 mybuf[4];
 	int ret;
 	
-	if ((size != 16) && (size != 32) && (size != 64)) return -1;
+	if (size > 64) return -1; 
 
 	mybuf[0] = 0x39;
 	mybuf[1] = (u8) (addr & 0xFF);
@@ -720,34 +741,33 @@ int gs_flashwrite(struct gs_ar0234_dev *sensor, u16 addr, u8 size, u8 * buf)
  {
 	struct i2c_client *client = sensor->i2c_client;
 	struct i2c_msg msg;
-	u8 * mybuf;
 	int ret;
 
-	if ((size != 16) && (size != 32) && (size != 64)) return -1;
+#ifdef MYDEBUG
+	pd(addr, buf, size);
+#endif
 
-	mybuf = (u8 *) kmalloc(sizeof(u8) * (size+3), GFP_KERNEL);
-	mybuf[0] = 0x38;
-	mybuf[1] = (u8) (addr & 0xFF);
-	mybuf[2] = (u8) ((addr >> 8) & 0xFF);
+	if (size > 64) return -1;
+
+	writebuf[0] = 0x38;
+	writebuf[1] = (u8) (addr & 0xFF);
+	writebuf[2] = (u8) ((addr >> 8) & 0xFF);
 
 	for (int i=0; i<size; i++)
 	{
-		mybuf[i+3] = buf[i];
+		writebuf[i+3] = buf[i];
 	}
-	// print_hex_dump(KERN_ALERT, "", DUMP_PREFIX_OFFSET, size+3, 1, mybuf, size+3, 1);
 
 	msg.addr = client->addr;
 	msg.flags = client->flags;
-	msg.buf = mybuf;
+	msg.buf = writebuf;
 	msg.len = size+3;
 
 	ret = gs_ar0234_i2c_trx_retry(client->adapter, &msg, 1);
 	if (ret < 0) {
 		dev_err(&client->dev, "%s: error: addr=%x, err=%d\n", __func__, addr, ret);
 	}
-	kfree(mybuf);
 	return 0;
-
  }
 
 int gs_page_erase(struct gs_ar0234_dev *sensor, u16 addr, u16 size)
@@ -782,19 +802,19 @@ int gs_page_erase(struct gs_ar0234_dev *sensor, u16 addr, u16 size)
 int gs_app_calc_crc(struct gs_ar0234_dev *sensor, u16 * pcrc)
 {
 	struct i2c_client *client = sensor->i2c_client;
-	struct i2c_msg msg;
-	u8 mybuf[0];
+	struct i2c_msg msg[2];
+	u8 mybuf[2];
 	int ret;
 	
 	mybuf[0] = 0x41;
 	mybuf[1] = 0x00;
 
-	msg.addr = client->addr;
-	msg.flags = client->flags;
-	msg.buf = mybuf;
-	msg.len = sizeof(mybuf);
+	msg[0].addr = client->addr;
+	msg[0].flags = client->flags;
+	msg[0].buf = mybuf;
+	msg[0].len = sizeof(mybuf);
 
-	ret = gs_ar0234_i2c_trx_retry(client->adapter, &msg, 1);
+	ret = gs_ar0234_i2c_trx_retry(client->adapter, &msg[0], 1);
 	if (ret < 0) {
 		dev_err(&client->dev, "%s: error: err=%d\n", __func__, ret);
 		return ret;
@@ -806,12 +826,12 @@ int gs_app_calc_crc(struct gs_ar0234_dev *sensor, u16 * pcrc)
 		return ret;
 	}
 
-	msg.addr = client->addr;
-	msg.flags = client->flags | I2C_M_RD;
-	msg.buf = mybuf;
-	msg.len = 2;
+	msg[1].addr = client->addr;
+	msg[1].flags = client->flags | I2C_M_RD;
+	msg[1].buf = mybuf;
+	msg[1].len = 2;
 
-	ret = gs_ar0234_i2c_trx_retry(client->adapter, &msg, 1);
+	ret = gs_ar0234_i2c_trx_retry(client->adapter, &msg[1], 1);
 	if (ret < 0) {
 		dev_err(&client->dev, "%s: error: err=%d\n", __func__, ret);
 		return ret;
@@ -823,12 +843,27 @@ int gs_app_calc_crc(struct gs_ar0234_dev *sensor, u16 * pcrc)
 
 int gs_app_read_crc(struct gs_ar0234_dev *sensor, u16 * pcrc)
 {
-	return gs_flashread(sensor,FLASH_APP_CRC_ADDRESS, 2, (u8 *) pcrc);
+	int ret;
+	u8 dat[2];
+
+	ret = gs_flashread(sensor,FLASH_APP_CRC_ADDRESS, 2, dat);
+	*pcrc = (((u16)dat[1])<<8) | dat[0];
+#ifdef MYDEBUG
+	printk("DEBUG: crc = %04x",*pcrc);
+#endif
+
+	return ret;
 }
 
 int gs_app_read_size(struct gs_ar0234_dev *sensor, u16 * psize)
 {
-	return gs_flashread(sensor,FLASH_APP_SIZE_ADDRESS, 2, (u8 *) psize);
+	int ret;
+	u8 dat[2];
+
+	ret = gs_flashread(sensor,FLASH_APP_SIZE_ADDRESS, 2, dat);
+	*psize = (((u16)dat[1])<<8) | dat[0];
+
+	return ret;	
 }
 
 int gs_app_write_size(struct gs_ar0234_dev *sensor, u16 size)
@@ -958,3 +993,59 @@ int gs_boot_id(struct gs_ar0234_dev *sensor, u16 * id)
 }
 
 
+#define POLY 0x1021
+/**
+ * @brief 16-bit CRC
+ * 
+ * @param CRC_acc 
+ * @param CRC_input 
+ * @return unsigned short 
+ */
+u16 UpdateCRC (u16 CRC_acc, u8 CRC_input)
+{
+	unsigned char i; // loop counter
+	// Create the CRC "dividend" for polynomial arithmetic (binary arithmetic
+	// with no carries)
+	CRC_acc = CRC_acc ^ (CRC_input << 8);
+	// "Divide" the poly into the dividend using CRC XOR subtraction
+	// CRC_acc holds the "remainder" of each divide
+	//
+	// Only complete this division for 8 bits since input is 1 byte
+	for (i = 0; i < 8; i++)
+	{
+		// Check if the MSB is set (if MSB is 1, then the POLY can "divide"
+		// into the "dividend")
+		if ((CRC_acc & 0x8000) == 0x8000)
+		{
+			// if so, shift the CRC value, and XOR "subtract" the poly
+			CRC_acc = CRC_acc << 1;
+			CRC_acc ^= POLY;
+		}
+		else
+		{
+			// if not, just shift the CRC value
+			CRC_acc = CRC_acc << 1;
+		}
+	}
+	// Return the final remainder (CRC value)
+	return CRC_acc;
+}
+
+/**
+ * @brief calculate crc over buffer of bytes
+ * 
+ * @param seed 
+ * @param count 
+ * @param value 
+ * @return u16 
+ */
+u16 gs_crc(u16 seed, u8 count, u8 * value)
+{
+	int n;
+	u16 newcrc = seed;
+	for(n=0; n < count; n++)
+	{
+		newcrc = UpdateCRC (newcrc, value[n]);
+	}
+	return newcrc;
+}

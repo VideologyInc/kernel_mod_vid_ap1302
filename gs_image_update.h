@@ -23,7 +23,8 @@
 
 
 int write_lines(char * buffer, int size);
-int flashapp(struct gs_ar0234_dev *sensor, char * buffer, int size, int type);
+int flashapp(struct gs_ar0234_dev *sensor, char * buffer, int size);
+int flashisp(struct gs_ar0234_dev *sensor, char * buffer, int size);
 
 
 #endif //INCLUDES_G_IMAGE_UPDATE_H_

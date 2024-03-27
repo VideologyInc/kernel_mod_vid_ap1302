@@ -5,29 +5,13 @@
 #include <linux/types.h>
 #include <linux/string.h>
 #include <linux/delay.h>
-//#include <stdio.h>
-//#include <stdlib.h>
-//#include <string.h>
-//#include <stdbool.h>
+#include <linux/device.h>
+
 #include "cam_ar0234.h"
 #include "gs_ap1302.h"
 #include "gs_image_update.h"
 
 
-
-
-#if 0
-/**
- * @brief  strstarts - does @str start with @prefix?
- * @param str: string to examine
- * @param prefix: prefix to look for.
- * @return bool
- */
-bool strstarts(const char *str, const char *prefix)
-{
-     return strncmp(str, prefix, strlen(prefix)) == 0;
-}
-#endif
 
 
 
@@ -118,7 +102,7 @@ int write_buffer(struct gs_ar0234_dev *sensor, char * buffer, int size, bool bwr
             if((bwriteapp == true) && (bwritenvm == true))
             {
                 // write all
-                if((address > FLASH_APP_START) && (address <= FLASH_NVM_MAX))
+                if((address >= FLASH_APP_START) && (address <= FLASH_NVM_MAX))
                 {
                     ret = gs_flashwrite(sensor, address, (u8)numvalues, values);
                 }
@@ -126,7 +110,7 @@ int write_buffer(struct gs_ar0234_dev *sensor, char * buffer, int size, bool bwr
             else if ((bwriteapp == true) && (bwritenvm == false)) 
             {
                 // write mainapp
-                if((address > FLASH_APP_START) && (address <= FLASH_APP_MAX))
+                if((address >= FLASH_APP_START) && (address <= FLASH_APP_MAX))
                 {
                     ret = gs_flashwrite(sensor, address, (u8)numvalues, values);
                 }
@@ -170,51 +154,52 @@ int write_buffer(struct gs_ar0234_dev *sensor, char * buffer, int size, bool bwr
  * @param type 
  * @return int 
  */
-int flashapp(struct gs_ar0234_dev *sensor, char * buffer, int size, int type)
+int flashapp(struct gs_ar0234_dev *sensor, char * buffer, int size)
 {
     int ret;
     bool bwriteapp, bwritenvm;
     u16 readcrc, calccrc;
-    //u16 appsize;
     struct i2c_client *client = sensor->i2c_client;
 
-
     // check id i2C bus is free
-    printk("DEBUG: check");
+    pr_debug("-->%s: check\n", __func__);
     ret = gs_check_wait(sensor, 50, 3000);
     if (ret < 0) {
 		dev_err(&client->dev, "%s: error: timeout err=%d\n", __func__, ret);
 		return ret;
 	}
 
+    if(sensor->update_type != BOOT)
+    {
+        // set pass
+        //pr_debug("-->%s: ppp\n", __func__);
+        ret = gs_set_password(sensor, PPP);
+        if (ret < 0) {
+            dev_err(&client->dev, "%s: error: password err=%d\n", __func__, ret);
+            return ret;
+        }
 
-    // set pass
-    printk("DEBUG: password");
-    ret = gs_set_password(sensor, PPP);
-    if (ret < 0) {
-		dev_err(&client->dev, "%s: error: password err=%d\n", __func__, ret);
-		return ret;
-	}
-
-    // start bootloader
-    printk("DEBUG: bootloader");
-    ret = gs_start_bootloader(sensor);
-    if (ret < 0) {
-		dev_err(&client->dev, "%s: error: bootloader err=%d\n", __func__, ret);
-		return ret;
-	}
-    msleep(500); // wait for bootloader
-    ret = gs_check_wait(sensor, 10, 3000); //check bootloader for max 3 seconds
-    if (ret < 0) {
-		dev_err(&client->dev, "%s: error: check_wait err=%d\n", __func__, ret);
-		return ret;
-	}
+        // start bootloader
+        pr_debug("---%s: bootloader\n", __func__);
+        ret = gs_start_bootloader(sensor);
+        if (ret < 0) {
+            dev_err(&client->dev, "%s: error: bootloader err=%d\n", __func__, ret);
+            return ret;
+        }
+        msleep(100); // wait for bootloader
+        ret = gs_check_wait(sensor, 100, 3000); //check bootloader for max 3 seconds
+        if (ret < 0) {
+            dev_err(&client->dev, "%s: error: check_wait err=%d\n", __func__, ret);
+            return ret;
+        }
+    }
 
     // erase flash
-    printk("DEBUG: erase %d %d",bwriteapp,bwritenvm);
-    switch(type)
+    pr_debug("---%s: erase\n", __func__);
+    switch(sensor->update_type)
     {
         case MCUNVM:
+        case BOOT:
             bwriteapp = true;
             bwritenvm = true;
             ret = gs_erase_all(sensor);
@@ -239,8 +224,16 @@ int flashapp(struct gs_ar0234_dev *sensor, char * buffer, int size, int type)
 		return ret;
 	}
 
+    // wait for erase
+    pr_debug("---%s: check\n", __func__);
+    ret = gs_check_wait(sensor, 10, 3000); //check bootloader for max 3 seconds
+    if (ret < 0) {
+        dev_err(&client->dev, "%s: error: check_wait err=%d\n", __func__, ret);
+        return ret;
+    }
+
     // write flash
-    printk("DEBUG: write");
+    pr_debug("---%s: write\n", __func__);
     ret = write_buffer(sensor, buffer, size, bwriteapp, bwritenvm);
     if (ret < 0) {
         dev_err(&client->dev, "%s: error: write_buffer err=%d\n", __func__, ret);
@@ -252,87 +245,202 @@ int flashapp(struct gs_ar0234_dev *sensor, char * buffer, int size, int type)
     if(bwriteapp)
     {
         // get the CRC's
-        printk("DEBUG: CRC");
+        pr_debug("---%s: crc\n", __func__);
         ret = gs_app_read_crc(sensor, &readcrc);
         if(ret) {
             dev_err(&client->dev, "%s: error: read_crc err=%d\n", __func__, ret);
             // what to do when crc fails?
             // erase app+nvm, app, nvm -> then reboot into bootloader? 
         }
+        pr_debug("---%s: calc crc\n", __func__);
         ret = gs_app_calc_crc(sensor, &calccrc);
         if(ret) {
             dev_err(&client->dev, "%s: error: calc_crc err=%d\n", __func__, ret);
             // what to do when crc fails?
             // erase app+nvm, app, nvm -> then reboot into bootloader? 
         }
-        /*
-        ret = gs_app_read_size(sensor, &appsize);
-        if(ret) {
-            dev_err(&client->dev, "%s: error: calc_crc err=%d\n", __func__, ret);
-            // what to do when crc fails?
-            // erase app+nvm, app, nvm -> then reboot into bootloader? 
-        }
-        */
 
         // check the CRC's
         if(readcrc != calccrc) {
             dev_err(&client->dev, "%s: error: crc check failed err=%d\n", __func__, ret);
             return -1;
         }
-        printk("DEBUG: Done");
     }
 
-    printk("DEBUG: reboot");
+    pr_debug("---%s: reboot\n", __func__);
     ret = gs_reboot(sensor);
     if(ret) {
         dev_err(&client->dev, "%s: error: reboot err=%d\n", __func__, ret);
-
     }
 
     // check id i2C bus is free
-    printk("DEBUG: check");
+    pr_debug("---%s: check\n", __func__);
     ret = gs_check_wait(sensor, 50, 3000);
     if (ret < 0) {
 		dev_err(&client->dev, "%s: error: timeout err=%d\n", __func__, ret);
 		return ret;
 	}
 
+    pr_debug("<--%s: done\n", __func__);
+
     // done
     return 0;
 }
 
 
-
-
-
-
 /**
- * @brief write_lines brom buffer and convert to data bytes
+ * @brief reads data from buffer and write data to flash line by line
  * 
+ * @param sensor 
  * @param buffer 
+ * @param size 
+ * @param binsize 
+ * @param crc 
  * @return int 
  */
-int write_lines(char * buffer, int size) 
+int write_isp_buffer(struct gs_ar0234_dev *sensor, char * buffer, int size, u32 * binsize, u16 * crc ) 
 {
     int numvalues;
     u32 address;
     u8 values[64];
     char * nextptr;
+    char * findptr;
+
+    int ret;
+    struct i2c_client *client = sensor->i2c_client;
 
     nextptr = buffer;
     while ((nextptr - buffer) < size) 
     {
-        if (strstarts(nextptr, "//")) {;}
+        if (strstarts(nextptr, "// CRC")) {
+            findptr = strchr(nextptr, (int)'x'); // find 1st 'x' ptr.
+            *crc = strtoul(findptr+1, NULL, 16);
+            //printk("DEBUG: crc: %X\n", *crc);
+        }
+        else if (strstarts(nextptr, "// Size")) {
+            findptr = strchr(nextptr, (int)'x'); // find 1st 'x' ptr.
+            *binsize = strtoul(findptr+1, NULL, 16);
+            //printk("DEBUG: size: %X\n", *binsize);
+        }
+        else if (strstarts(nextptr, "//")) {;}
         else if (strstarts(nextptr, "[TOTALSIZE")) {;}
         else if (strstarts(nextptr, "[BLOCKSIZE")) {;}
         else
         {
             numvalues = getdata(nextptr, &address, values);
-            
-            print_data(address, values, numvalues);
+            ret = gs_isp_write(sensor, address, (u8) numvalues, values);
+            if (ret < 0) {
+                dev_err(&client->dev, "%s: error: flashwrite err=%d\n", __func__, ret);
+                return ret;
+            }
         }
         nextptr = strchr(nextptr+1, (int)'\n') + 1; // find next  pointer to line
     }
+    return 0;
+}
+
+
+
+/**
+ * @brief update the isp
+ * 
+ * @param sensor 
+ * @param buffer 
+ * @param size 
+ * @param type 
+ * @return int 
+ */
+int flashisp(struct gs_ar0234_dev *sensor, char * buffer, int size)
+{
+    int ret;
+    u16 status;
+    u16 readcrc, calccrc;
+    u32 binsize;
+    struct i2c_client *client = sensor->i2c_client;
+
+    // check id i2C bus is free
+    pr_debug("-->%s: check\n", __func__);
+    ret = gs_check_wait(sensor, 50, 3000);
+    if (ret < 0) {
+		dev_err(&client->dev, "%s: error: timeout err=%d\n", __func__, ret);
+		return ret;
+	}
+
+    // set pass
+    //pr_debug("---%s: ppp\n", __func__);
+    ret = gs_set_password(sensor, PPP);
+    if (ret < 0) {
+        dev_err(&client->dev, "%s: error: password err=%d\n", __func__, ret);
+        return ret;
+    }
+
+    // set camera in upgrader mode
+    pr_debug("---%s: upgrader mode\n", __func__);
+    ret = gs_upgrader_mode(sensor);
+    if (ret < 0) {
+		dev_err(&client->dev, "%s: error: upgrader-mode err=%d\n", __func__, ret);
+		return ret;
+	}
+
+    //ret = gs_get_spi_id(struct gs_ar0234_dev *sensor, 0x9F, u8 * mf, u16 * id); // cmd:  (0x9F = JEDEC) or (0x90 =ID)
+
+    // Check the SPI status
+    //pr_debug("---%s: get flash status\n", __func__);
+    ret = gs_get_spistatus(sensor, &status);
+    if (ret < 0) {
+		dev_err(&client->dev, "%s: error: flash status %04X err=%d\n", __func__, status, ret);
+		return ret;
+	}
+
+    // erase flash
+    pr_debug("---%s: erase\n", __func__);
+    ret = gs_isp_erase_all(sensor);
+    if (ret < 0) {
+		dev_err(&client->dev, "%s: error: erase err=%d\n", __func__, ret);
+		return ret;
+	}
+
+    // write flash
+    pr_debug("---%s: write\n", __func__);
+    ret = write_isp_buffer(sensor, buffer, size, &binsize, &readcrc);
+    if (ret < 0) {
+        dev_err(&client->dev, "%s: error: write_isp_buffer err=%d\n", __func__, ret);
+        // TODO: what to do when write fails?
+        // erase app+nvm, app, nvm -> then reboot into bootloader? 
+    }
+
+    // get the crc from camera
+    pr_debug("---%s: get crc \n", __func__);
+    ret = gs_isp_calc_crc(sensor, 0, binsize-1, &calccrc);
+    if(ret < 0) {
+        dev_err(&client->dev, "%s: error: calc crc err=%d\n", __func__, ret);
+        return -1;
+    }   
+    // check the CRC's
+    pr_debug("---%s: CRC check\n", __func__);
+    if(readcrc != calccrc) {
+        dev_err(&client->dev, "%s: error: crc check failed %x != %x err=%d\n", __func__, readcrc, calccrc, ret);
+        return -1;
+    }
+
+    // reboot camera
+    pr_debug("---%s: reboot\n", __func__);
+    ret = gs_reboot(sensor);
+    if(ret) {
+        dev_err(&client->dev, "%s: error: reboot err=%d\n", __func__, ret);
+    }
+
+    // check if i2C bus is free
+    pr_debug("---%s: check\n", __func__);
+    ret = gs_check_wait(sensor, 50, 3000);
+    if (ret < 0) {
+		dev_err(&client->dev, "%s: error: timeout err=%d\n", __func__, ret);
+		return ret;
+	}
+
+    pr_debug("<--%s: done\n", __func__);
+
+    // done
     return 0;
 }
 

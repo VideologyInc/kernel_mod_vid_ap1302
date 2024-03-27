@@ -155,6 +155,7 @@ struct gs_ar0234_dev {
 	int mbus_num;
 	int framerate;
 	int firmware_loaded;
+	int update_type;
 };
 
 

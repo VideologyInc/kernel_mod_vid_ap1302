@@ -4,7 +4,7 @@
 #ifndef INCLUDES_GS_AP1302_H_
 #define INCLUDES_GS_AP1302_H_
 
-#define I2C_RETRIES 50
+#define I2C_RETRIES 200
 
 #define GS_POWER_UP 		1
 #define GS_POWER_DOWN 		0
@@ -24,6 +24,9 @@
 #define FLASH_APP_SIZE  FLASH_APP_MAX - FLASH_APP_START + 1
 #define FLASH_NVM_SIZE  FLASH_NVM_MAX - FLASH_NVM_START + 1
 #define PPP 0x0554
+#define BOOTID 0x5AA5
+#define INITIAL_CRC 0xFFFF
+
 
 enum commands {
 	GS_COMD_8BIT_REG_W =            0x30,
@@ -122,10 +125,12 @@ enum colorformat {
 };
 
 enum versiontype {
-	MCU = 0,
+	NONE = 0,
+	MCU,
 	MCUNVM,
 	NVM,
-	ISP
+	ISP,
+	BOOT
 };
 
 
@@ -152,6 +157,10 @@ int gs_start_bootloader(struct gs_ar0234_dev *sensor);
 // generic
 int gs_check(struct gs_ar0234_dev *sensor);
 int gs_check_wait(struct gs_ar0234_dev *sensor, u16 wait, u16 timeout);
+
+// mainapp
+int gs_upgrader_mode(struct gs_ar0234_dev *sensor);
+
 
 // NVM - mainapp
 int gs_read_nvm(struct gs_ar0234_dev *sensor, u8 page, u8 addr, u8 size, u8 * buf);
@@ -181,5 +190,7 @@ int gs_erase_nvm(struct gs_ar0234_dev *sensor);
 int gs_erase_all(struct gs_ar0234_dev *sensor);
 int gs_reboot(struct gs_ar0234_dev *sensor);
 int gs_boot_id(struct gs_ar0234_dev *sensor, u16 * id);
+
+u16 gs_crc(u16 seed, u8 count, u8 * value);
 
 #endif // INCLUDES_GS_AP1302_H_
