@@ -149,6 +149,7 @@ struct gs_ar0234_dev {
 	struct v4l2_fwnode_endpoint ep; /* the parsed DT endpoint info */
 	struct gpio_desc *reset_gpio;
 	struct mutex lock;
+	struct mutex probe_lock;
 	struct v4l2_mbus_framefmt fmt;
 	struct gs_ar0234_ctrls ctrls;
 	const struct resolution *mode;
@@ -156,6 +157,9 @@ struct gs_ar0234_dev {
 	int framerate;
 	int firmware_loaded;
 	int update_type;
+	u16 mcu_version;
+	u16 nvm_version;
+	u16 isp_version;
 };
 
 

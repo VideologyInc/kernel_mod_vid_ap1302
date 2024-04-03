@@ -12,9 +12,6 @@
 #include "gs_image_update.h"
 
 
-
-
-
 /**
  * @brief  get address, data and data_count from array of chars ending with "\n"
  * @param line 
@@ -41,8 +38,6 @@ int getdata(char * line, u32 * paddress, u8 * pdata)
     }
     return (icount-1);
 }
-
-
 
 
 /**
@@ -88,7 +83,9 @@ int write_buffer(struct gs_ar0234_dev *sensor, char * buffer, int size, bool bwr
     u8 values[64];
     char * nextptr;
     int ret;
-     struct i2c_client *client = sensor->i2c_client;
+    struct i2c_client *client = sensor->i2c_client;
+
+    //print_hex_dump(KERN_ALERT, "", DUMP_PREFIX_OFFSET, 16, 1, buffer, 100, 1); 
 
     nextptr = buffer;
     while ((nextptr - buffer) < size) 
@@ -163,11 +160,13 @@ int flashapp(struct gs_ar0234_dev *sensor, char * buffer, int size)
 
     // check id i2C bus is free
     pr_debug("-->%s: check\n", __func__);
-    ret = gs_check_wait(sensor, 50, 3000);
+    ret = gs_check_wait(sensor, 50, 3000); //check i2c for max 3 seconds
     if (ret < 0) {
 		dev_err(&client->dev, "%s: error: timeout err=%d\n", __func__, ret);
 		return ret;
 	}
+
+    //print_hex_dump(KERN_ALERT, "", DUMP_PREFIX_OFFSET, 16, 1, buffer, 100, 1);
 
     if(sensor->update_type != BOOT)
     {
@@ -275,7 +274,7 @@ int flashapp(struct gs_ar0234_dev *sensor, char * buffer, int size)
 
     // check id i2C bus is free
     pr_debug("---%s: check\n", __func__);
-    ret = gs_check_wait(sensor, 50, 3000);
+    ret = gs_check_wait(sensor, 50, 5000); //check reboot for max 5 seconds
     if (ret < 0) {
 		dev_err(&client->dev, "%s: error: timeout err=%d\n", __func__, ret);
 		return ret;
@@ -360,7 +359,7 @@ int flashisp(struct gs_ar0234_dev *sensor, char * buffer, int size)
 
     // check id i2C bus is free
     pr_debug("-->%s: check\n", __func__);
-    ret = gs_check_wait(sensor, 50, 3000);
+    ret = gs_check_wait(sensor, 50, 3000); //check i2c for max 3 seconds
     if (ret < 0) {
 		dev_err(&client->dev, "%s: error: timeout err=%d\n", __func__, ret);
 		return ret;
@@ -424,15 +423,15 @@ int flashisp(struct gs_ar0234_dev *sensor, char * buffer, int size)
     }
 
     // reboot camera
-    pr_debug("---%s: reboot\n", __func__);
-    ret = gs_reboot(sensor);
+    pr_debug("---%s: restart\n", __func__);
+    ret = gs_restart(sensor);
     if(ret) {
-        dev_err(&client->dev, "%s: error: reboot err=%d\n", __func__, ret);
+        dev_err(&client->dev, "%s: error: restart err=%d\n", __func__, ret);
     }
 
     // check if i2C bus is free
     pr_debug("---%s: check\n", __func__);
-    ret = gs_check_wait(sensor, 50, 3000);
+    ret = gs_check_wait(sensor, 50, 5000); //check restart for max 5 seconds
     if (ret < 0) {
 		dev_err(&client->dev, "%s: error: timeout err=%d\n", __func__, ret);
 		return ret;

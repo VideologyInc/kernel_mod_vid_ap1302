@@ -22,7 +22,6 @@
 #define FLASH_PAGE_SIZE         512
 
 
-int write_lines(char * buffer, int size);
 int flashapp(struct gs_ar0234_dev *sensor, char * buffer, int size);
 int flashisp(struct gs_ar0234_dev *sensor, char * buffer, int size);
 
