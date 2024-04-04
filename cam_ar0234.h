@@ -18,9 +18,6 @@
 #define PAD_SOURCE			1
 #define NUM_PADS			1
 
-#define GS_POWER_UP 		1
-#define GS_POWER_DOWN 		0
-
 
 #define V4L2_CID_CAMERA_CAM_AR0234 	(V4L2_CID_CAMERA_CLASS_BASE+50) 		//camera controls for CAM_AR0234
 #define V4L2_CID_USER_CAM_AR0234 	(V4L2_CID_USER_BASE+2000) 				//user controls for CAM_AR0234
@@ -69,96 +66,7 @@
 #define V4L2_CID_PROC_BLA1			(V4L2_CID_PROC_CAM_AR0234+1)
 
 
-enum commands {
-	GS_COMD_8BIT_REG_W =            0x30,
-	GS_COMD_8BIT_REG_R =            0x31,
-	GS_COMD_16BIT_REG_W =           0x32,
-	GS_COMD_16BIT_REG_R =           0x33,
-	GS_COMD_32BIT_REG_W =           0x34,
-	GS_COMD_32BIT_REG_R =           0x35,
-	GS_COMD_ISP_FLASH_W =           0x40,
-	GS_COMD_ISP_FLASH_R =           0x41,
-	GS_COMD_ISP_FLASH_ERASE =       0x42,
-	// Password protected commands
-	GS_COMD_ISP_FLASH_GET_ID =      0x43,
-	GS_COMD_ISP_FLASH_BLOCK_ERASE = 0x44,
-	GS_COMD_ISP_FLASH_GET_STAT =    0x45,
-	GS_COMD_ISP_FLASH_GET_CRC =     0x47,
-	GS_COMD_NVM_W =                 0x50,
-	GS_COMD_NVM_R =                 0x51,
-	GS_COMD_NVM_ERASE =             0x52,
-	GS_COMD_R_SERIAL =              0x61,
-};
 
-enum regs {
-	GS_REG_DUMMY					= 0x00,
-	GS_REG_BRIGHTNESS     			= 0x02,
-	GS_REG_CONTRAST       			= 0x04,
-	GS_REG_SATURATION     			= 0x06,
-	GS_REG_SHARPNESS      			= 0x0A,
-	GS_REG_NOISE_RED      			= 0x0C,
-	GS_REG_GAMMA		  			= 0x0E,
-	GS_REG_ZOOM						= 0x18,
-	GS_REG_ZOOM_SPEED				= 0x1C,
-	GS_REG_PAN						= 0x1D,
-	GS_REG_TILT						= 0x1E,
-	GS_REG_MIRROR_FLIP    			= 0x1F,
-	GS_REG_EXPOSURE_MODE  			= 0x20,
-	GS_REG_ROI_MODE     			= 0x21,
-	GS_REG_EXPOSURE_UPPER   		= 0x24,
-	GS_REG_EXPOSURE_MAX     		= 0x28,
-	GS_REG_GAIN_UPPER       		= 0x2C,
-	GS_REG_GAIN_MAX         		= 0x2E,
-	GS_REG_GAIN						= 0x30,
-	GS_REG_EXPOSURE_ABS    			= 0x34,
-	GS_REG_AE_TARGET      			= 0x3C,
-	GS_REG_BLC_MODE					= 0x40,
-	GS_REG_BLC_LEVEL				= 0x41,
-	GS_REG_BLC_WINDOW_X0    		= 0x42,
-	GS_REG_BLC_WINDOW_Y0    		= 0x43,
-	GS_REG_BLC_WINDOW_X1    		= 0x44,
-	GS_REG_BLC_WINDOW_Y1    		= 0x45,
-	GS_REG_BLC_RATIO        		= 0x4A,
-	GS_REG_BLC_FACE_LEVEL   		= 0x4B,
-	GS_REG_BLC_FACE_WEIGHT  		= 0x4C,
-	GS_REG_BLC_ROI_LEVEL    		= 0x4F,
-	GS_REG_WHITEBALANCE   			= 0x50,
-	GS_REG_WB_TEMPERATURE 			= 0x52,
-	GS_REG_FACE_DETECT 				= 0x55,
-	GS_REG_ANTIFLICKER_MODE 		= 0x56,
-	GS_REG_ANTIFLICKER_FREQ 		= 0x57,
-	GS_REG_COLORFX					= 0x76,
-	GS_REG_FACE_DETECT_SPEED 		= 0x82,
-	GS_REG_FACE_DETECT_THRESHOLD 	= 0x83,
-	GS_REG_FACE_CHROMA_THRESHOLD 	= 0x84,
-	GS_REG_FACE_MIN_SIZE  			= 0x86,
-	GS_REG_FACE_MAX_SIZE    		= 0x88,
-	GS_REG_AWB_MAN_X				= 0x8A,
-	GS_REG_AWB_MAN_Y				= 0x8C,
-	GS_REG_TESTPATTERN 				= 0xE0,
-	GS_REG_POWER                    = 0xE7,
-	GS_REG_SAVE_RESTART				= 0xF0,
-};
-
-enum colorformat {
-	GS_CF_YUV422 = 0,
-	GS_CF_YUV420,
-	GS_CF_YUV400,
-	GS_CF_YUV422BT,
-	GS_CF_YUV420BT,
-	GS_CF_YUV400BT,
-	GS_CF_RGB_888,
-	GS_CF_RGB_565,
-	GS_CF_RGB_555,
-	GS_CF_JPEG422,
-	GS_CF_JPEG420,
-	GS_CF_JPEG422EX,
-	GS_CF_JPEG420EX,
-	GS_CF_BAYER_16,
-	GS_CF_BAYER_12,
-	GS_CF_BAYER_10,
-	GS_CF_BAYER_8,
-};
 
 struct resolution {
 	u16 width;
@@ -241,11 +149,17 @@ struct gs_ar0234_dev {
 	struct v4l2_fwnode_endpoint ep; /* the parsed DT endpoint info */
 	struct gpio_desc *reset_gpio;
 	struct mutex lock;
+	struct mutex probe_lock;
 	struct v4l2_mbus_framefmt fmt;
 	struct gs_ar0234_ctrls ctrls;
 	const struct resolution *mode;
 	int mbus_num;
 	int framerate;
+	int firmware_loaded;
+	int update_type;
+	u16 mcu_version;
+	u16 nvm_version;
+	u16 isp_version;
 };
 
 
