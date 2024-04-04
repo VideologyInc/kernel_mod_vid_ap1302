@@ -29,14 +29,17 @@
 #include "gs_ap1302.h"
 #include "gs_image_update.h"
 
-#define MCU_FIRMWARE_VERSION 0x0019
-#define NVM_FIRMWARE_VERSION 0x0001
+#define MCU_FIRMWARE_VERSION 0x0019 // version = 0.25
+#define NVM_FIRMWARE_VERSION 0x0001 // version = 0.1
 #define ISP_FIRMWARE_VERSION 442
 
-#define MCU_FIRMWARE_NAME "SFT-23361_mcu.img"
-#define NVM_FIRMWARE_NAME "SFT-23363_nvm.img"
-//#define NVM_FIRMWARE_NAME "SFT-23361_mcu.img"
-#define ISP_FIRMWARE_NAME "SFT-23366_isp.img"
+// MCU firmware contains both mcu and nvm in a single image therefore it has two version numbers.
+#define MCU_FIRMWARE_NAME "SFT-23361_mcu_0.25_0.1.img"   	// trigger on gpio 8
+//#define MCU_FIRMWARE_NAME "SFT-23361_mcu_0.25_0.2.img" 	// trigger on gpio 7
+#define NVM_FIRMWARE_NAME "SFT-23363_nvm_0.1.img"			// trigger on gpio 8
+//#define NVM_FIRMWARE_NAME "SFT-23363_nvm_0.2.img"			// trigger on gpio 7
+#define ISP_FIRMWARE_NAME "SFT-23366-23368_full_color_442.img"
+//#define ISP_FIRMWARE_NAME "SFT-23366-23368_full_mono_442.img"
 
 
 static int gs_ar0234_i_cntrl(struct gs_ar0234_dev *sensor);
