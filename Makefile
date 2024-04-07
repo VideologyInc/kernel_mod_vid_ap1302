@@ -9,7 +9,10 @@ KERNEL_SRC ?= /usr/src/kernel
 default:
 	make -C ${KERNEL_SRC} M=$(CURDIR) modules
 
-modules_install:
+install_firmware:
+	install -Dm0600 firmware/* ${INSTALL_FW_PATH}/
+
+modules_install: install_firmware
 	make -C ${KERNEL_SRC} M=$(CURDIR) modules_install
 
 clean:
