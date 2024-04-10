@@ -1,2 +1,8 @@
 build
 *.egg*
+*.o
+*.cmd
+Module.symvers
+modules.order
+*.ko
+*.mod*
