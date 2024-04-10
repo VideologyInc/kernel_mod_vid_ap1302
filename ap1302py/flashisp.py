@@ -77,7 +77,7 @@ def main():
 	parser.add_argument('-f', dest='filename', metavar='filename',  required=True, help='Image filename')
 	parser.add_argument('-p',  dest='password', metavar='password', type=lambda x: int(x,0), default=0, help='set password')
 	parser.add_argument('-D', dest='dummy', action='store_true', help='Dummy I2C ransfers')
-	parser.add_argument('-i', dest='iic', metavar='iic',type=lambda p: p if os.path.exists(p) else FileNotFoundError(p), default='/dev/i2c0', help='i2c dev path')
+	parser.add_argument('-i', dest='iic', metavar='iic',type=lambda p: p if os.path.exists(p) else FileNotFoundError(p), default='/dev/i2c-0', help='i2c dev path')
 	args = parser.parse_args()
 
 	gsi2c.dummy(args.dummy)

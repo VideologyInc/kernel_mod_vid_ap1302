@@ -8,7 +8,7 @@ import os
 
 def main():
     parser = argparse.ArgumentParser(description="Reboot",prog="reboot")
-    parser.add_argument('-i', dest='iic', metavar='iic',type=lambda p: p if os.path.exists(p) else FileNotFoundError(p), default='/dev/i2c0', help='i2c dev path')
+    parser.add_argument('-i', dest='iic', metavar='iic',type=lambda p: p if os.path.exists(p) else FileNotFoundError(p), default='/dev/i2c-0', help='i2c dev path')
     args = parser.parse_args()
 
     gsi2c.i2c = I2C(args.iic)

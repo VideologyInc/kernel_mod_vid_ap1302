@@ -11,7 +11,7 @@ def main():
     parser.add_argument('-r', dest='register', metavar='register', type=lambda x: int(x,0), required=True, help='register address')
     parser.add_argument('-s', dest='size', metavar='reg size', type=lambda x: int(x,0), default=8,help='register size',choices=[8,16,32])
     parser.add_argument('-d',  dest='writedata', metavar='data', type=lambda x: int(x,0),  required=True, help='data value: 1 2 0x01 0x23 etc ..')
-    parser.add_argument('-i', dest='iic', metavar='iic',type=lambda p: p if os.path.exists(p) else FileNotFoundError(p), default='/dev/i2c0', help='i2c dev path')
+    parser.add_argument('-i', dest='iic', metavar='iic',type=lambda p: p if os.path.exists(p) else FileNotFoundError(p), default='/dev/i2c-0', help='i2c dev path')
     args = parser.parse_args()
 
     gsi2c.i2c = I2C(args.iic)

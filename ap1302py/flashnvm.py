@@ -101,7 +101,7 @@ def main():
     parser.add_argument('-n', dest='nvmblocknr', metavar='nvmblocknr', type=int, default=99, help='write nvm block: 0=userreg, 1=usercal, 2=factoryreg, 3=factorycal, 99=all')
     parser.add_argument('-p',  dest='password', metavar='password', type=lambda x: int(x,0), default=0, help='pasword in case of writing to factory space')
     parser.add_argument('-D', dest='dummy', action='store_true', help='Dummy I2C ransfers')
-    parser.add_argument('-i', dest='iic', metavar='iic',type=lambda p: p if os.path.exists(p) else FileNotFoundError(p), default='/dev/i2c0', help='i2c dev path')
+    parser.add_argument('-i', dest='iic', metavar='iic',type=lambda p: p if os.path.exists(p) else FileNotFoundError(p), default='/dev/i2c-0', help='i2c dev path')
     args = parser.parse_args()
 
     gsi2c.dummy(args.dummy)

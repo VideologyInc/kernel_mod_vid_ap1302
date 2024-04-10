@@ -74,7 +74,7 @@ def main():
     parser.add_argument('-a', dest='writeapp', action='store_true', help='Write app only')
     parser.add_argument('-n', dest='writenvm', action='store_true', help='Write nvm only')
     parser.add_argument('-D', dest='dummy', action='store_true', help='Dummy I2C ransfers')
-    parser.add_argument('-i', dest='iic', metavar='iic',type=lambda p: p if os.path.exists(p) else FileNotFoundError(p), default='/dev/i2c0', help='i2c dev path')
+    parser.add_argument('-i', dest='iic', metavar='iic',type=lambda p: p if os.path.exists(p) else FileNotFoundError(p), default='/dev/i2c-0', help='i2c dev path')
     args = parser.parse_args()
 
     gsi2c.dummy(args.dummy)
