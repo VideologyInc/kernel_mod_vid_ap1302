@@ -232,7 +232,7 @@ static int gs_ar0234_set_fmt(struct v4l2_subdev *sd, struct v4l2_subdev_state *s
 	struct v4l2_mbus_framefmt *fmt = &format->format;
 	int ret=0, i;
 
-	dev_dbg(sd->dev, "%s: \n", __func__);
+	dev_info(sensor->dev, "%s \n",__func__);
 
 	if (format->pad >= NUM_PADS)
 		return -EINVAL;
@@ -1521,26 +1521,28 @@ static int gs_ar0234_s_stream(struct v4l2_subdev *sd, int enable)
 		dev_err(sensor->dev, "endpoint bus_type not supported: %d\n", sensor->ep.bus_type);
 		return -EINVAL;
 	}
-#if 1
-	mutex_lock(&sensor->lock);
-
-	// turn off mipi?
-	gs_ar0234_write_reg8(sensor, 0xE1, 0x02); // format change state
-	// set rres, fixed formats reg 0x10,
-	gs_ar0234_write_reg8(sensor, 0x10, sensor->mode->frame_format_code);
-	// set fr reg- 0x16 (16b = 8b,8b [fraction)]) = 60,50,30,25 or any int
-	gs_ar0234_write_reg16(sensor, 0x16, ((u16)(sensor->mode->framerate) << 8));
-	//sensor->fmt.
-	//  set format type
-	//turn on mipi
-	gs_ar0234_write_reg8(sensor, 0xE1, 0x03); // format change state
-
-	// ret = gs_ar0234_upcall(sensor, "start_stream");
-
-	mutex_unlock(&sensor->lock);
-#endif
+	
 	if (enable)
+	{
+		mutex_lock(&sensor->lock);
+
+		// turn off mipi?
+		gs_ar0234_write_reg8(sensor, 0xE1, 0x02); // format change state
+		// set rres, fixed formats reg 0x10,
+		gs_ar0234_write_reg8(sensor, 0x10, sensor->mode->frame_format_code);
+		// set fr reg- 0x16 (16b = 8b,8b [fraction)]) = 60,50,30,25 or any int
+		gs_ar0234_write_reg16(sensor, 0x16, ((u16)(sensor->mode->framerate) << 8));
+		//sensor->fmt.
+		//  set format type
+		//turn on mipi
+		gs_ar0234_write_reg8(sensor, 0xE1, 0x03); // format change state
+
+		// ret = gs_ar0234_upcall(sensor, "start_stream");
+
+		mutex_unlock(&sensor->lock);
+
 		pr_debug("%s: Starting stream at WxH@fps=%dx%d@%d\n", __func__, sensor->mode->width, sensor->mode->height, sensor->mode->framerate);
+	}
 	else
 		pr_debug("%s: Stopping stream \n", __func__);
 
@@ -1550,6 +1552,8 @@ static int gs_ar0234_s_stream(struct v4l2_subdev *sd, int enable)
 
 int gs_ar0234_init_cfg(struct v4l2_subdev *sd, struct v4l2_subdev_state *state) 
 {
+	struct gs_ar0234_dev *sensor = to_gs_ar0234_dev(sd);
+	dev_info(sensor->dev, "%s \n",__func__);
 	//TODO: DEBUG
 #if 0
 	struct gs_ar0234_dev *sensor = to_gs_ar0234_dev(sd);
