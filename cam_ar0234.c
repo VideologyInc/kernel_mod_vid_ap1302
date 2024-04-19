@@ -29,7 +29,7 @@
 #include "gs_ap1302.h"
 #include "gs_image_update.h"
 
-#define MCU_FIRMWARE_VERSION 0x001A // version = 0.26
+#define MCU_FIRMWARE_VERSION 0x001B // version = 0.27
 #define NVM_FIRMWARE_VERSION 0x0001 // version = 0.1 (un-even version for GPIO 8)
 //#define NVM_FIRMWARE_VERSION 0x0002 // version = 0.2 (even version for GPIO 7)
 #define ISP_FIRMWARE_VERSION 443
@@ -1630,6 +1630,8 @@ static void gs_ar0234_fw_update(const struct firmware *fw, void *context)
 
 	mutex_lock(&sensor->lock);
 
+	dev_info(sensor->dev, "--------> Firmware update in progress . . .\n");
+
 	switch(sensor->update_type)
 	{
 		case MCU:
@@ -1659,6 +1661,8 @@ exit:
 		sensor->firmware_loaded = 0;
 		//gs_ar0234_remove(sensor->i2c_client);
 	}
+	else
+		dev_info(sensor->dev, "<-------- Firmware update finised\n");
 }
 
 /**
