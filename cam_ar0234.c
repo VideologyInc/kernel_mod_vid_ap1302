@@ -32,7 +32,7 @@
 #define MCU_FIRMWARE_VERSION 0x001A // version = 0.26
 #define NVM_FIRMWARE_VERSION 0x0001 // version = 0.1 (un-even version for GPIO 8)
 //#define NVM_FIRMWARE_VERSION 0x0002 // version = 0.2 (even version for GPIO 7)
-#define ISP_FIRMWARE_VERSION 442
+#define ISP_FIRMWARE_VERSION 443
 
 // MCU firmware contains both mcu and nvm in a single image therefore it has two version numbers.
 #define MCU_FIRMWARE_NAME "SFT-23361_mcu_0.26_0.1.img"   				// trigger on gpio 8
@@ -41,8 +41,8 @@
 #define NVM_FIRMWARE_NAME "SFT-23363_nvm_0.1.img" 						// trigger on gpio 8
 //#define NVM_FIRMWARE_NAME "SFT-23363_nvm_0.2.img"						// trigger on gpio 7
 
-#define ISP_COLOR_FIRMWARE_NAME "SFT-24147_full_color_442.img"	// color
-#define ISP_MONO_FIRMWARE_NAME "SFT-24148_full_mono_442.img"		// monochrome
+#define ISP_COLOR_FIRMWARE_NAME "SFT-24147_full_color_443.img"	// color
+#define ISP_MONO_FIRMWARE_NAME "SFT-24148_full_mono_443.img"		// monochrome
 
 
 //get module parameter from /etc/modprobe.d/vid_isp_ar0234.conf file 
