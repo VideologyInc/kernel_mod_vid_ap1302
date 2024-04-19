@@ -18,6 +18,7 @@
 #define PAD_SOURCE			1
 #define NUM_PADS			1
 
+#define MAX_CAMERA_DEVICES 10
 
 #define V4L2_CID_CAMERA_CAM_AR0234 	(V4L2_CID_CAMERA_CLASS_BASE+50) 		//camera controls for CAM_AR0234
 #define V4L2_CID_USER_CAM_AR0234 	(V4L2_CID_USER_BASE+2000) 				//user controls for CAM_AR0234
@@ -160,6 +161,8 @@ struct gs_ar0234_dev {
 	u16 mcu_version;
 	u16 nvm_version;
 	u16 isp_version;
+	u8  sensor_type;
+	int csi_id;
 };
 
 

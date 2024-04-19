@@ -366,6 +366,13 @@ int gs_upgrader_mode(struct gs_ar0234_dev *sensor)
 	return gs_ar0234_write_reg8(sensor, 0xEB, 0x82);
 }
 
+int gs_get_camera_type(struct gs_ar0234_dev *sensor, u8 * type)
+{
+	int ret = 0;
+	ret = gs_ar0234_read_reg8(sensor, GS_REG_CAMERA_TYPE, type);
+	return ret;
+}
+
 
 //#define MYDEBUG
 #ifdef MYDEBUG 
@@ -989,6 +996,36 @@ int gs_boot_id(struct gs_ar0234_dev *sensor, u16 * id)
 	}
 
 	*id = ((u16)mybuf[1] << 8) | mybuf[0];
+	return 0;
+}
+
+int gs_boot_cameratype(struct gs_ar0234_dev *sensor, u8 * type)
+{
+	struct i2c_client *client = sensor->i2c_client;
+	struct i2c_msg msg[2];
+	u8 mybuf[0];
+	int ret;
+
+	mybuf[0] = 0xF1;
+	mybuf[1] = 0x00;
+
+	msg[0].addr = client->addr;
+	msg[0].flags = client->flags;
+	msg[0].buf = mybuf;
+	msg[0].len = 1;
+
+	msg[1].addr = client->addr;
+	msg[1].flags = client->flags | I2C_M_RD;
+	msg[1].buf = mybuf;
+	msg[1].len = 1;
+
+	ret = gs_ar0234_i2c_trx_retry(client->adapter, msg, 2);
+	if (ret < 0) {
+		dev_err(&client->dev, "%s: error: err=%d\n", __func__, ret);
+		return ret;
+	}
+
+	*type = mybuf[0];
 	return 0;
 }
 

@@ -96,6 +96,7 @@ enum regs {
 	GS_REG_TESTPATTERN 				= 0xE0,
 	GS_REG_POWER                    = 0xE7,
 	GS_REG_SAVE_RESTART				= 0xF0,
+	GS_REG_CAMERA_TYPE              = 0xF1,
 	GS_REG_ISP_MINOR_VERSION		= 0xEC,
 	GS_REG_ISP_MAJOR_VERSION		= 0xED,
 	GS_REG_NVM_MINOR_VERSION		= 0xEE,
@@ -134,6 +135,12 @@ enum versiontype {
 };
 
 
+enum cameratype {
+	UNKNOWN = 0,
+	COLOR,
+	MONOCHROME
+};
+
 /**
  * Function prototypes
  */
@@ -160,6 +167,7 @@ int gs_check_wait(struct gs_ar0234_dev *sensor, u16 wait, u16 timeout);
 
 // mainapp
 int gs_upgrader_mode(struct gs_ar0234_dev *sensor);
+int gs_get_camera_type(struct gs_ar0234_dev *sensor, u8 * type);
 
 
 // NVM - mainapp
@@ -190,6 +198,7 @@ int gs_erase_nvm(struct gs_ar0234_dev *sensor);
 int gs_erase_all(struct gs_ar0234_dev *sensor);
 int gs_reboot(struct gs_ar0234_dev *sensor);
 int gs_boot_id(struct gs_ar0234_dev *sensor, u16 * id);
+int gs_boot_cameratype(struct gs_ar0234_dev *sensor, u8 * type);
 
 u16 gs_crc(u16 seed, u8 count, u8 * value);
 

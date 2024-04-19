@@ -29,17 +29,72 @@
 #include "gs_ap1302.h"
 #include "gs_image_update.h"
 
-#define MCU_FIRMWARE_VERSION 0x0019 // version = 0.25
-#define NVM_FIRMWARE_VERSION 0x0001 // version = 0.1
+#define MCU_FIRMWARE_VERSION 0x001A // version = 0.26
+#define NVM_FIRMWARE_VERSION 0x0001 // version = 0.1 (un-even version for GPIO 8)
+//#define NVM_FIRMWARE_VERSION 0x0002 // version = 0.2 (even version for GPIO 7)
 #define ISP_FIRMWARE_VERSION 442
 
 // MCU firmware contains both mcu and nvm in a single image therefore it has two version numbers.
-#define MCU_FIRMWARE_NAME "SFT-23361_mcu_0.25_0.1.img"   	// trigger on gpio 8
-//#define MCU_FIRMWARE_NAME "SFT-23361_mcu_0.25_0.2.img" 	// trigger on gpio 7
-#define NVM_FIRMWARE_NAME "SFT-23363_nvm_0.1.img"			// trigger on gpio 8
-//#define NVM_FIRMWARE_NAME "SFT-23363_nvm_0.2.img"			// trigger on gpio 7
-#define ISP_FIRMWARE_NAME "SFT-23366-23368_full_color_442.img"
-//#define ISP_FIRMWARE_NAME "SFT-23366-23368_full_mono_442.img"
+#define MCU_FIRMWARE_NAME "SFT-23361_mcu_0.26_0.1.img"   				// trigger on gpio 8
+//#define MCU_FIRMWARE_NAME "SFT-23361_mcu_0.26_0.2.img" 				// trigger on gpio 7
+
+#define NVM_FIRMWARE_NAME "SFT-23363_nvm_0.1.img" 						// trigger on gpio 8
+//#define NVM_FIRMWARE_NAME "SFT-23363_nvm_0.2.img"						// trigger on gpio 7
+
+#define ISP_COLOR_FIRMWARE_NAME "SFT-24147_full_color_442.img"	// color
+#define ISP_MONO_FIRMWARE_NAME "SFT-24148_full_mono_442.img"		// monochrome
+
+
+//get module parameter from /etc/modprobe.d/vid_isp_ar0234.conf file 
+static int nvm_firmware_versions[MAX_CAMERA_DEVICES] = { [0 ...(MAX_CAMERA_DEVICES - 1)] = NVM_FIRMWARE_VERSION };
+module_param_array(nvm_firmware_versions, int, NULL, 0444);
+MODULE_PARM_DESC(devices, "nvm version numbers");
+
+static char * nvm_firmware_names[MAX_CAMERA_DEVICES];
+module_param_array(nvm_firmware_names, charp, NULL, 0444);
+MODULE_PARM_DESC(devices, "nvm file names");
+
+#if 0
+static int mcu_firmware_versions[MAX_CAMERA_DEVICES] = { [0 ...(MAX_CAMERA_DEVICES - 1)] = NVM_FIRMWARE_VERSION };
+module_param_array(mcu_firmware_versions, int, NULL, 0444);
+MODULE_PARM_DESC(devices, "mcu version numbers");
+
+static char * mcu_firmware_names[MAX_CAMERA_DEVICES];
+module_param_array(mcu_firmware_names, charp, NULL, 0444);
+MODULE_PARM_DESC(devices, "mcu file names");
+
+static int isp_color_firmware_versions[MAX_CAMERA_DEVICES] = { [0 ...(MAX_CAMERA_DEVICES - 1)] = NVM_FIRMWARE_VERSION };
+module_param_array(isp_color_firmware_versions, int, NULL, 0444);
+MODULE_PARM_DESC(devices, "isp color version numbers");
+
+static char * isp_color_firmware_names[MAX_CAMERA_DEVICES];
+module_param_array(isp_color_firmware_names, charp, NULL, 0444);
+MODULE_PARM_DESC(devices, "isp color file names");
+
+static int isp_mono_firmware_versions[MAX_CAMERA_DEVICES] = { [0 ...(MAX_CAMERA_DEVICES - 1)] = NVM_FIRMWARE_VERSION };
+module_param_array(isp_mono_firmware_versions, int, NULL, 0444);
+MODULE_PARM_DESC(devices, "isp mono version numbers");
+
+static char * isp_mono_firmware_names[MAX_CAMERA_DEVICES];
+module_param_array(isp_mono_firmware_names, charp, NULL, 0444);
+MODULE_PARM_DESC(devices, "isp mono file names");
+#endif
+
+#ifdef DEBUG
+static int gs_print_params(void)
+{
+	for(int n = 0; n < MAX_CAMERA_DEVICES; n++)
+	{
+		if(nvm_firmware_names[n] == NULL) break;
+		pr_debug("---%s: %s  (%x)\n",__func__,nvm_firmware_names[n], nvm_firmware_versions[n]);
+		//pr_debug("---%s: %s  (%x)\n",__func__,mcu_firmware_names[n], mcu_firmware_versions[n]);
+		//pr_debug("---%s: %s  (%x)\n",__func__,isp_color_firmware_names[n], isp_color_firmware_versions[n]);
+		//pr_debug("---%s: %s  (%x)\n",__func__,isp_mono_firmware_names[n], isp_mono_firmware_versions[n]);
+	}
+	return 0;
+}
+#endif
+
 
 
 static int gs_ar0234_i_cntrl(struct gs_ar0234_dev *sensor);
@@ -1614,35 +1669,50 @@ static void gs_ar0234_fw_handler(const struct firmware *fw, void *context)
 	struct gs_ar0234_dev *sensor = (struct gs_ar0234_dev *)context;
 	const struct firmware *fw_local;
 	u16 isp_code;
+	char * isp_name;
 
 	mutex_lock(&sensor->probe_lock);
 
-	if(sensor->mcu_version != MCU_FIRMWARE_VERSION) 
+	if(sensor->update_type == BOOT) // always update both MCU firmware and NVM
 	{
-		sensor->update_type = MCU;
-		if(sensor->nvm_version != NVM_FIRMWARE_VERSION)
-			sensor->update_type = MCUNVM;
-		dev_info(sensor->dev, "Loading current MCU Firmware: %04x\n", MCU_FIRMWARE_VERSION);
+		dev_info(sensor->dev, "Boot: Loading MCU Firmware: %s (%04x)\n", MCU_FIRMWARE_NAME, MCU_FIRMWARE_VERSION);
 		gs_ar0234_fw_update(fw, sensor);
 		release_firmware(fw); 
 		sensor->mcu_version = MCU_FIRMWARE_VERSION;
 		sensor->nvm_version = NVM_FIRMWARE_VERSION;
 	}
-	else if(sensor->nvm_version != NVM_FIRMWARE_VERSION) 
+	else 
 	{
-		release_firmware(fw); // dont use fw
-		sensor->update_type = NVM;
-		dev_info(sensor->dev, "Loading current NVM Firmware: %04x\n", NVM_FIRMWARE_VERSION);
-		if(request_firmware_direct(&fw_local, NVM_FIRMWARE_NAME, sensor->dev) == 0) {
-			gs_ar0234_fw_update(fw_local,sensor);
-			release_firmware(fw_local); 
-			sensor->nvm_version = NVM_FIRMWARE_VERSION;
+		if(sensor->mcu_version != MCU_FIRMWARE_VERSION) 
+		{
+			sensor->update_type = MCU; // update MCU firmware only
+			dev_info(sensor->dev, "Loading MCU Firmware: %s (%04x)\n", MCU_FIRMWARE_NAME, MCU_FIRMWARE_VERSION);
+			gs_ar0234_fw_update(fw, sensor);
+			release_firmware(fw); 
+			sensor->mcu_version = MCU_FIRMWARE_VERSION;
 		}
-		else	
-			dev_err(sensor->dev, "request_firmware_direct failed\n");
-	}
-	else {
-		release_firmware(fw); // dont use fw
+		else 
+			release_firmware(fw); 
+
+		// update NVM if version does not match and version number in the conf five is not zero
+		if ( (sensor->nvm_version != nvm_firmware_versions[sensor->csi_id]) && (nvm_firmware_versions[sensor->csi_id] != 0)) 
+		{
+			if(nvm_firmware_names[sensor->csi_id] != NULL) // firmware name must exist
+			{
+				sensor->update_type = NVM;
+				dev_info(sensor->dev, "Loading NVM Firmware: %s (%04x)\n", nvm_firmware_names[sensor->csi_id], nvm_firmware_versions[sensor->csi_id]);
+				if(request_firmware_direct(&fw_local, nvm_firmware_names[sensor->csi_id], sensor->dev) == 0) 
+				{
+					gs_ar0234_fw_update(fw_local,sensor);
+					release_firmware(fw_local); 
+					sensor->nvm_version = nvm_firmware_versions[sensor->csi_id];
+				}
+				else	
+					dev_err(sensor->dev, "request_firmware_direct failed\n");
+			}
+			else
+				dev_err(sensor->dev, "Loading NVM Firmware failed\n");
+		}
 	}
 
 	ret = gs_ar0234_version(sensor, ISP, &isp_code);
@@ -1653,14 +1723,27 @@ static void gs_ar0234_fw_handler(const struct firmware *fw, void *context)
 	if(isp_code != ISP_FIRMWARE_VERSION) 
 	{
 		sensor->update_type = ISP;	
-		dev_info(sensor->dev, "Loading current ISP Firmware: %04x\n", ISP_FIRMWARE_VERSION);
-		if(request_firmware_direct(&fw_local, ISP_FIRMWARE_NAME, sensor->dev) == 0) {
-			gs_ar0234_fw_update(fw_local, sensor);
-			release_firmware(fw_local); 
-			sensor->isp_version = ISP_FIRMWARE_VERSION;
+		ret = gs_get_camera_type(sensor, &sensor->sensor_type);
+		if(ret)
+			dev_err(sensor->dev, "gs_get_camera_type failed\n");
+		pr_debug("---%s: cameratype: %d\n",__func__, sensor->sensor_type);	
+
+		if (sensor->sensor_type == COLOR) isp_name=ISP_COLOR_FIRMWARE_NAME;
+		else if (sensor->sensor_type == MONOCHROME) isp_name=ISP_MONO_FIRMWARE_NAME;
+
+		if(sensor->sensor_type != UNKNOWN) // dont update, leave previous ISP image intact
+		{
+			dev_info(sensor->dev, "Loading ISP Firmware: %s (%04x)\n", isp_name, ISP_FIRMWARE_VERSION);
+			if(request_firmware_direct(&fw_local, ISP_COLOR_FIRMWARE_NAME, sensor->dev) == 0) {
+				gs_ar0234_fw_update(fw_local, sensor);
+				release_firmware(fw_local); 
+				sensor->isp_version = ISP_FIRMWARE_VERSION;
+			}
+			else	
+				dev_err(sensor->dev, "request_firmware_direct failed\n");
 		}
-		else	
-			dev_err(sensor->dev, "request_firmware_direct failed\n");
+		else 
+			dev_info(sensor->dev, "Loading ISP Firmware skipped\n");
 	}
 
 	// read register values from Sensor
@@ -1759,6 +1842,17 @@ static int gs_ar0234_probe(struct i2c_client *client, const struct i2c_device_id
 	if (ret) return -EIO;
 	pr_debug("---%s: Power up\n",__func__);	
 
+#ifdef DEBUG
+	gs_print_params();
+#endif
+
+	ret = of_property_read_u32(dev->of_node, "csi_id", &sensor->csi_id); // get the csi port id
+	if (ret) {
+		dev_err(dev, "csi id missing or invalid\n");
+		return ret;
+	}
+	pr_debug("---%s: CSI ID = %d\n",__func__,sensor->csi_id);	
+
 	mutex_lock(&sensor->probe_lock);
 
 	 // check for bootloader
@@ -1768,7 +1862,6 @@ static int gs_ar0234_probe(struct i2c_client *client, const struct i2c_device_id
 	{
 		update = true;
 		sensor->update_type = BOOT;
-		dev_info(dev, "Boot: Loading current MCU Firmware: %04x\n", MCU_FIRMWARE_VERSION);
 
 		// call update handler
 		ret = request_firmware_nowait(THIS_MODULE, FW_ACTION_UEVENT, MCU_FIRMWARE_NAME, dev, GFP_KERNEL, sensor, gs_ar0234_fw_handler);
@@ -1794,11 +1887,11 @@ static int gs_ar0234_probe(struct i2c_client *client, const struct i2c_device_id
 		sensor->isp_version = isp_code;
 
 		pr_debug("---%s: Firmware versions: %04x %04x %04x\n", __func__, mcu_code, nvm_code, isp_code);
-		if((mcu_code != MCU_FIRMWARE_VERSION) || (nvm_code != NVM_FIRMWARE_VERSION) || (isp_code != ISP_FIRMWARE_VERSION))
+		if((mcu_code != MCU_FIRMWARE_VERSION) || (nvm_code != nvm_firmware_versions[sensor->csi_id]) || (isp_code != ISP_FIRMWARE_VERSION))
 		{
 			update = true;
 			// call update handler
-			dev_info(dev, "Normal: Loading current MCU Firmware: %04x\n", MCU_FIRMWARE_VERSION);
+			//dev_info(dev, "Normal: Loading  MCU Firmware: %04x\n", MCU_FIRMWARE_VERSION);
 			ret = request_firmware_nowait(THIS_MODULE, FW_ACTION_UEVENT, MCU_FIRMWARE_NAME, dev, GFP_KERNEL, sensor, gs_ar0234_fw_handler);
 			if (ret) {
 				dev_err(dev, "Failed request_firmware_nowait err %d\n", ret);
@@ -1806,6 +1899,9 @@ static int gs_ar0234_probe(struct i2c_client *client, const struct i2c_device_id
 			}
 		}
 	}
+
+	ret = gs_get_camera_type(sensor, &sensor->sensor_type);
+	if (ret) return -EINVAL;
 
 	v4l2_i2c_subdev_init(&sensor->sd, client, &gs_ar0234_subdev_ops);
 
