@@ -21,7 +21,6 @@ def main():
 
     gsi2c.i2c = I2C(args.iic)
 
-
     if(gsi2c.bootid() == 0x5AA5):
         print("Bootloader is active!")
 
@@ -30,6 +29,14 @@ def main():
     print("NVM version = %d.%d" %(gsi2c.read8(0xEF),gsi2c.read8(0xEE)))
 
     print("ISP version = %d" %(gsi2c.read8(0xED)<<8 | gsi2c.read8(0xEC)))
+
+    cameratype=gsi2c.read8(0xF1)
+    if cameratype==1:
+        print("Camera Type = Color")
+    elif cameratype==2:
+        print("Camera Type = Mono")
+    else:
+        print("Camera Type = Unknown")	
 
     gsi2c.write8(0xe8,CAMERA_STATE)
     print("CAMERA_STATE = %d" %(gsi2c.read8(0xe9)))
