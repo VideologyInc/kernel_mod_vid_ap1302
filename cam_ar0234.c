@@ -1517,6 +1517,8 @@ static int gs_ar0234_s_stream(struct v4l2_subdev *sd, int enable)
 	struct gs_ar0234_dev *sensor = to_gs_ar0234_dev(sd);
 	int ret = 0;
 
+	pr_debug("%s: start %d\n", __func__, sensor->csi_id);
+
 	if (sensor->ep.bus_type != V4L2_MBUS_CSI2_DPHY){
 		dev_err(sensor->dev, "endpoint bus_type not supported: %d\n", sensor->ep.bus_type);
 		return -EINVAL;
