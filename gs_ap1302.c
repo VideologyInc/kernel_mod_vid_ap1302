@@ -13,7 +13,7 @@
 /*
  * Buffer
  */
-static u8 writebuf[68];
+//static u8 writebuf[68];
 
 
 /**
@@ -435,6 +435,7 @@ int gs_ar0234_write_nvm(struct gs_ar0234_dev *sensor, u8 page, u8 addr, u8 size,
 	struct i2c_client *client = sensor->i2c_client;
 	struct i2c_msg msg;
 	int ret;
+	u8 writebuf[68];
 
 	if (size == 0) return 0;
 
@@ -470,6 +471,7 @@ int gs_isp_write(struct gs_ar0234_dev *sensor, u32 addr, u8 size, u8 * buf)
 	int ret;
 	u16 status;
     int timeout;
+	u8 writebuf[68];
 
 	if (size == 0) return 0;
 	if (size > 64) return -1; //max size  is 64
@@ -749,6 +751,7 @@ int gs_flashwrite(struct gs_ar0234_dev *sensor, u16 addr, u8 size, u8 * buf)
 	struct i2c_client *client = sensor->i2c_client;
 	struct i2c_msg msg;
 	int ret;
+	u8 writebuf[68];
 
 #ifdef MYDEBUG
 	pd(addr, buf, size);
