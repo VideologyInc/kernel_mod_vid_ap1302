@@ -41,8 +41,8 @@
 #define NVM_FIRMWARE_NAME "SFT-23363_nvm_0.1.img" 						// trigger on gpio 8
 //#define NVM_FIRMWARE_NAME "SFT-23363_nvm_0.2.img"						// trigger on gpio 7
 
-#define ISP_COLOR_FIRMWARE_NAME "SFT-24147_full_color_443.img"	// color
-#define ISP_MONO_FIRMWARE_NAME "SFT-24148_full_mono_443.img"		// monochrome
+#define ISP_COLOR_FIRMWARE_NAME "SFT-24147_full_color_443.img"			// color
+#define ISP_MONO_FIRMWARE_NAME "SFT-24148_full_mono_443.img"			// monochrome
 
 
 //get module parameter from /etc/modprobe.d/vid_isp_ar0234.conf file 
@@ -54,31 +54,6 @@ static char * nvm_firmware_names[MAX_CAMERA_DEVICES];
 module_param_array(nvm_firmware_names, charp, NULL, 0444);
 MODULE_PARM_DESC(devices, "nvm file names");
 
-#if 0
-static int mcu_firmware_versions[MAX_CAMERA_DEVICES] = { [0 ...(MAX_CAMERA_DEVICES - 1)] = NVM_FIRMWARE_VERSION };
-module_param_array(mcu_firmware_versions, int, NULL, 0444);
-MODULE_PARM_DESC(devices, "mcu version numbers");
-
-static char * mcu_firmware_names[MAX_CAMERA_DEVICES];
-module_param_array(mcu_firmware_names, charp, NULL, 0444);
-MODULE_PARM_DESC(devices, "mcu file names");
-
-static int isp_color_firmware_versions[MAX_CAMERA_DEVICES] = { [0 ...(MAX_CAMERA_DEVICES - 1)] = NVM_FIRMWARE_VERSION };
-module_param_array(isp_color_firmware_versions, int, NULL, 0444);
-MODULE_PARM_DESC(devices, "isp color version numbers");
-
-static char * isp_color_firmware_names[MAX_CAMERA_DEVICES];
-module_param_array(isp_color_firmware_names, charp, NULL, 0444);
-MODULE_PARM_DESC(devices, "isp color file names");
-
-static int isp_mono_firmware_versions[MAX_CAMERA_DEVICES] = { [0 ...(MAX_CAMERA_DEVICES - 1)] = NVM_FIRMWARE_VERSION };
-module_param_array(isp_mono_firmware_versions, int, NULL, 0444);
-MODULE_PARM_DESC(devices, "isp mono version numbers");
-
-static char * isp_mono_firmware_names[MAX_CAMERA_DEVICES];
-module_param_array(isp_mono_firmware_names, charp, NULL, 0444);
-MODULE_PARM_DESC(devices, "isp mono file names");
-#endif
 
 #ifdef DEBUG
 static int gs_print_params(void)
@@ -96,9 +71,7 @@ static int gs_print_params(void)
 #endif
 
 
-
 static int gs_ar0234_i_cntrl(struct gs_ar0234_dev *sensor);
-
 
 static struct resolution sensor_res_list[] = {
 	{.width = 1280, .height = 720,  .framerate = 25, .frame_format_code = 12, .name="720p25"  },
@@ -147,50 +120,6 @@ static inline struct v4l2_subdev *ctrl_to_sd(struct v4l2_ctrl *ctrl)
 	return &container_of(ctrl->handler, struct gs_ar0234_dev,
 			     ctrls.handler)->sd;
 }
-
-#if  0
-// FIXME: implement everything in kernel I2C commands
-//static char upcall_string[512];
-static int gs_ar0234_upcall(struct gs_ar0234_dev *sensor, char *call_str)
-{
-	char *argv[5], *envp[5];
-
-	dev_dbg_ratelimited(sensor->dev, "%s: \n", __func__);
-
-	argv[0] = "/usr/bin/python3";
-	argv[1] = "/bin/gs_ar0234_upcall.py";
-	argv[2] = call_str;
-	argv[3] = NULL;
-
-	/* minimal command environment taken from cpu_run_sbin_hotplug */
-	envp[0] = "HOME=/home/root/";
-	envp[1] = "PATH=/sbin:/bin:/usr/sbin:/usr/bin";
-	envp[2] = NULL;
-
-	// call_usermodehelper(argv[0], argv, envp, UMH_WAIT_EXEC);
-	return 0;
-}
-#endif
-
-#if 0
-static int print_upcall(char * print_str)
-{
-	char *argv[5], *envp[5];
-
-	argv[0] = "/bin/echo.coreutils";
-	argv[1] = print_str;
-	argv[2] = ">>";
-	argv[3] = "/home/root/gs0234_feature/log.txt";
-	argv[4] = NULL;
-
-	envp[0] = "HOME=/home/root/";
-	envp[1] = "PATH=/sbin:/bin:/usr/sbin:/usr/bin";
-	envp[2] = NULL;
-
-	call_usermodehelper(argv[0], argv, envp, UMH_WAIT_EXEC);
-	return 0;
-}
-#endif
 
 
 /* --------------- Subdev Operations --------------- */
@@ -249,11 +178,7 @@ static int gs_ar0234_set_fmt(struct v4l2_subdev *sd, struct v4l2_subdev_state *s
 		return -EINVAL;
 
 
-
-	// TODO : implement function to set media-bus format and colorspace based on fmt
-
 	/////////////////////////////////////////////////////////////////////////////////
-
 
 	sensor->framerate = new_mode->framerate;
 
@@ -264,10 +189,7 @@ static int gs_ar0234_set_fmt(struct v4l2_subdev *sd, struct v4l2_subdev_state *s
 
 	*fmt = format->format;
 
-	// if ((new_mode != sensor->mode) && (format->which != V4L2_SUBDEV_FORMAT_TRY)) {
 	sensor->mode = new_mode;
-	// snprintf(upcall_string, sizeof(upcall_string), "0x%02x", resolution);
-	//ret |= gs_ar0234_upcall(sensor, new_mode->name);
 
 	pr_debug("%s: sensor->ep.bus_type =%d\n", __func__, sensor->ep.bus_type);
 	pr_debug("%s: sensor->ep.bus      =%p\n", __func__, &sensor->ep.bus);
@@ -310,8 +232,6 @@ static int gs_ar0234_s_ctrl(struct v4l2_ctrl *ctrl)
 	u8 val8;
 	u16 tmp;
 
-	// if (sensor->power_count == 0)
-	// 	return 0;
 	dev_dbg_ratelimited(sd->dev, "%s: \n", __func__);
 
 	switch (ctrl->id) {
@@ -688,7 +608,6 @@ static int gs_ar0234_i_cntrl(struct gs_ar0234_dev *sensor)
 	dev_dbg(sensor->dev, "%s: \n", __func__);
 
 	ret = gs_ar0234_read_reg16(sensor, GS_REG_BRIGHTNESS, (short *) &sensor->ctrls.brightness->cur.val);
-	//dev_dbg(sensor->dev, "%s: brighness = %x \n", __func__, sensor->ctrls.brightness->cur.val);
 	if (ret < 0) return ret;
 
 	ret = gs_ar0234_read_reg16(sensor, GS_REG_CONTRAST, (short *)&sensor->ctrls.contrast->cur.val);
@@ -755,7 +674,6 @@ static int gs_ar0234_i_cntrl(struct gs_ar0234_dev *sensor)
 	ret = gs_ar0234_read_reg32(sensor, GS_REG_EXPOSURE_ABS, &uval32);
 	if (ret < 0) return ret;
 	sensor->ctrls.exposure_absolute->cur.val = uval32/100; // 100us
-	//dev_dbg(sensor->dev, "%s: exposure abs = %x %d is this correct?\n", __func__, uval32,sensor->ctrls.exposure_absolute->cur.val);
 
 	ret = gs_ar0234_read_reg32(sensor, GS_REG_EXPOSURE_UPPER, &uval32);
 	sensor->ctrls.exposure_upper->cur.val = uval32/100; // 100us
@@ -945,6 +863,7 @@ static const struct v4l2_ctrl_config roi_mode_0 = {
         .step = 1,
 		.def = 0,
 };
+
 static const struct v4l2_ctrl_config roi_mode_1 = {
 	    .ops = &gs_ar0234_ctrl_ops,
         .id = V4L2_CID_ROI_MODE_1,
@@ -955,6 +874,7 @@ static const struct v4l2_ctrl_config roi_mode_1 = {
         .step = 1,
 		.def = 0,
 };
+
 static const struct v4l2_ctrl_config roi_mode_2 = {
 	    .ops = &gs_ar0234_ctrl_ops,
         .id = V4L2_CID_ROI_MODE_2,
@@ -977,6 +897,7 @@ static const struct v4l2_ctrl_config exposure_upper = {
         .step = 1,
 		.def = 333,
 };
+
 static const struct v4l2_ctrl_config exposure_max = {
 	    .ops = &gs_ar0234_ctrl_ops,
         .id = V4L2_CID_EXPOSURE_MAX,
@@ -988,6 +909,7 @@ static const struct v4l2_ctrl_config exposure_max = {
         .step = 1,
 		.def = 333,
 };
+
 static const struct v4l2_ctrl_config gain_upper = {
 	    .ops = &gs_ar0234_ctrl_ops,
         .id = V4L2_CID_GAIN_UPPER,
@@ -999,6 +921,7 @@ static const struct v4l2_ctrl_config gain_upper = {
         .step = 1,
 		.def = 0x0800,
 };
+
 static const struct v4l2_ctrl_config gain_max = {
 		.ops = &gs_ar0234_ctrl_ops,
         .id = V4L2_CID_GAIN_MAX,
@@ -1022,6 +945,7 @@ static const struct v4l2_ctrl_config blc_window_x0 = {
         .step = 1,
 		.def = 0x00,
 };
+
 static const struct v4l2_ctrl_config blc_window_y0 = {
 		.ops = &gs_ar0234_ctrl_ops,
         .id = V4L2_CID_BLC_WINDOW_Y0,
@@ -1033,6 +957,7 @@ static const struct v4l2_ctrl_config blc_window_y0 = {
         .step = 1,
 		.def = 0x00,
 };
+
 static const struct v4l2_ctrl_config blc_window_x1 = {
 		.ops = &gs_ar0234_ctrl_ops,
         .id = V4L2_CID_BLC_WINDOW_X1,
@@ -1044,6 +969,7 @@ static const struct v4l2_ctrl_config blc_window_x1 = {
         .step = 1,
 		.def = 0x80,
 };
+
 static const struct v4l2_ctrl_config blc_window_y1 = {
 		.ops = &gs_ar0234_ctrl_ops,
         .id = V4L2_CID_BLC_WINDOW_Y1,
@@ -1055,6 +981,7 @@ static const struct v4l2_ctrl_config blc_window_y1 = {
         .step = 1,
 		.def = 0x80,
 };
+
 static const struct v4l2_ctrl_config blc_ratio = {
 		.ops = &gs_ar0234_ctrl_ops,
         .id = V4L2_CID_BLC_RATIO,
@@ -1066,6 +993,7 @@ static const struct v4l2_ctrl_config blc_ratio = {
         .step = 1,
 		.def = 0x80,
 };
+
 static const struct v4l2_ctrl_config blc_face_level = {
 		.ops = &gs_ar0234_ctrl_ops,
         .id = V4L2_CID_BLC_FACE_LEVEL,
@@ -1077,6 +1005,7 @@ static const struct v4l2_ctrl_config blc_face_level = {
         .step = 1,
 		.def = 0x80,
 };
+
 static const struct v4l2_ctrl_config blc_face_weight = {
 		.ops = &gs_ar0234_ctrl_ops,
         .id = V4L2_CID_BLC_FACE_WEIGHT,
@@ -1088,6 +1017,7 @@ static const struct v4l2_ctrl_config blc_face_weight = {
         .step = 1,
 		.def = 0x80,
 };
+
 static const struct v4l2_ctrl_config blc_roi_level = {
 		.ops = &gs_ar0234_ctrl_ops,
         .id = V4L2_CID_BLC_ROI_LEVEL,
@@ -1110,6 +1040,7 @@ static const struct v4l2_ctrl_config face_detect_0 = {
         .step = 1,
 		.def = 0,
 };
+
 static const struct v4l2_ctrl_config face_detect_4 = {
 		.ops = &gs_ar0234_ctrl_ops,
         .id = V4L2_CID_FACE_DETECT_4,
@@ -1120,6 +1051,7 @@ static const struct v4l2_ctrl_config face_detect_4 = {
         .step = 1,
 		.def = 0,
 };
+
 static const struct v4l2_ctrl_config face_detect_5 = {
 		.ops = &gs_ar0234_ctrl_ops,
         .id = V4L2_CID_FACE_DETECT_5,
@@ -1142,6 +1074,7 @@ static const struct v4l2_ctrl_config face_detect_speed = {
         .step = 1,
 		.def = 0x00,
 };
+
 static const struct v4l2_ctrl_config face_detect_threshold = {
 		.ops = &gs_ar0234_ctrl_ops,
         .id = V4L2_CID_FACE_DETECT_THRESHOLD,
@@ -1153,6 +1086,7 @@ static const struct v4l2_ctrl_config face_detect_threshold = {
         .step = 1,
 		.def = 0x80,
 };
+
 static const struct v4l2_ctrl_config face_chroma_threshold = {
 		.ops = &gs_ar0234_ctrl_ops,
         .id = V4L2_CID_FACE_CHROMA_THRESHOLD,
@@ -1164,6 +1098,7 @@ static const struct v4l2_ctrl_config face_chroma_threshold = {
         .step = 1,
 		.def = 0x0C,
 };
+
 static const struct v4l2_ctrl_config face_min_size = {
 		.ops = &gs_ar0234_ctrl_ops,
         .id = V4L2_CID_FACE_MIN_SIZE,
@@ -1175,6 +1110,7 @@ static const struct v4l2_ctrl_config face_min_size = {
         .step = 1,
 		.def = 0x0400,
 };
+
 static const struct v4l2_ctrl_config face_max_size = {
 		.ops = &gs_ar0234_ctrl_ops,
         .id = V4L2_CID_FACE_MAX_SIZE,
@@ -1198,6 +1134,7 @@ static const struct v4l2_ctrl_config awb_man_x = {
         .step = 1,
 		.def = 0x0000,
 };
+
 static const struct v4l2_ctrl_config awb_man_y = {
 		.ops = &gs_ar0234_ctrl_ops,
         .id = V4L2_CID_AWB_MAN_Y,
@@ -1220,6 +1157,7 @@ static const struct v4l2_ctrl_config store_registers = {
         .step = 0,
 		.def = 0,
 };
+
 static const struct v4l2_ctrl_config restore_registers = {
 		.ops = &gs_ar0234_ctrl_ops,
         .id = V4L2_CID_RESTORE_REGISTERS,
@@ -1230,6 +1168,7 @@ static const struct v4l2_ctrl_config restore_registers = {
         .step = 0,
 		.def = 0,
 };
+
 static const struct v4l2_ctrl_config restore_factory = {
 		.ops = &gs_ar0234_ctrl_ops,
         .id = V4L2_CID_RESTORE_FACTORY,
@@ -1240,6 +1179,7 @@ static const struct v4l2_ctrl_config restore_factory = {
         .step = 0,
 		.def = 0,
 };
+
 static const struct v4l2_ctrl_config reboot = {
 		.ops = &gs_ar0234_ctrl_ops,
         .id = V4L2_CID_REBOOT,
@@ -1250,7 +1190,6 @@ static const struct v4l2_ctrl_config reboot = {
         .step = 0,
 		.def = 0,
 };
-
 
 static int gs_ar0234_init_controls(struct gs_ar0234_dev *sensor)
 {
@@ -1265,9 +1204,6 @@ static int gs_ar0234_init_controls(struct gs_ar0234_dev *sensor)
 
 	/* we can use our own mutex for the ctrl lock */
 	hdl->lock = &sensor->lock;
-
-	/* Clock related controls */
-	// ctrls->pixel_rate = v4l2_ctrl_new_std(hdl, ops, V4L2_CID_PIXEL_RATE, 0, INT_MAX, 1, gs_ar0234_calc_pixel_rate(sensor));
 
 	// Camera control
 	ctrls->store_registers = v4l2_ctrl_new_custom(hdl, &store_registers, NULL);
@@ -1350,14 +1286,6 @@ static int gs_ar0234_init_controls(struct gs_ar0234_dev *sensor)
 		dev_err(sensor->dev, "%s: error: %d\n", __func__, ret);
 		goto free_ctrls;
 	}
-
-	// ctrls->pixel_rate->flags |= V4L2_CTRL_FLAG_READ_ONLY;
-	// ctrls->gain->flags |= V4L2_CTRL_FLAG_VOLATILE;
-	// ctrls->exposure->flags |= V4L2_CTRL_FLAG_VOLATILE;
-
-	// v4l2_ctrl_auto_cluster(3, &ctrls->auto_wb, 0, false);
-	// v4l2_ctrl_auto_cluster(2, &ctrls->auto_gain, 0, true);
-	// v4l2_ctrl_auto_cluster(2, &ctrls->auto_exp, 1, true);
 
 	sensor->sd.ctrl_handler = hdl;
 	return 0;
@@ -1539,8 +1467,6 @@ static int gs_ar0234_s_stream(struct v4l2_subdev *sd, int enable)
 		//turn on mipi
 		gs_ar0234_write_reg8(sensor, 0xE1, 0x03); // format change state
 
-		// ret = gs_ar0234_upcall(sensor, "start_stream");
-
 		mutex_unlock(&sensor->lock);
 
 		pr_debug("%s: Starting stream at WxH@fps=%dx%d@%d\n", __func__, sensor->mode->width, sensor->mode->height, sensor->mode->framerate);
@@ -1556,15 +1482,6 @@ int gs_ar0234_init_cfg(struct v4l2_subdev *sd, struct v4l2_subdev_state *state)
 {
 	struct gs_ar0234_dev *sensor = to_gs_ar0234_dev(sd);
 	dev_info(sensor->dev, "%s \n",__func__);
-	//TODO: DEBUG
-#if 0
-	struct gs_ar0234_dev *sensor = to_gs_ar0234_dev(sd);
-	pr_debug("%s: BLa\n", __func__);
-	mutex_lock(&sensor->lock);
-	pr_debug("%s: BLa\n", __func__);
-	mutex_unlock(&sensor->lock);
-	pr_debug("%s: BLa\n", __func__);
-#endif
 	return 0;
 }
 
@@ -1656,12 +1573,10 @@ static void gs_ar0234_fw_update(const struct firmware *fw, void *context)
 
 	sensor->firmware_loaded = 1;
 exit:
-	//release_firmware(fw);
 	mutex_unlock(&sensor->lock);
 	if (ret < 0) {
 		dev_err(sensor->dev, "Failed to load firmware: %d\n", ret);
 		sensor->firmware_loaded = 0;
-		//gs_ar0234_remove(sensor->i2c_client);
 	}
 	else
 		dev_info(sensor->dev, "<-------- Firmware update finised\n");
@@ -1901,7 +1816,6 @@ static int gs_ar0234_probe(struct i2c_client *client, const struct i2c_device_id
 		{
 			update = true;
 			// call update handler
-			//dev_info(dev, "Normal: Loading  MCU Firmware: %04x\n", MCU_FIRMWARE_VERSION);
 			ret = request_firmware_nowait(THIS_MODULE, FW_ACTION_UEVENT, MCU_FIRMWARE_NAME, dev, GFP_KERNEL, sensor, gs_ar0234_fw_handler);
 			if (ret) {
 				dev_err(dev, "Failed request_firmware_nowait err %d\n", ret);

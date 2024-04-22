@@ -10,11 +10,6 @@
 #include "gs_ap1302.h"
 
 
-/*
- * Buffer
- */
-//static u8 writebuf[68];
-
 
 /**
  * generic
@@ -53,7 +48,6 @@ int gs_check(struct gs_ar0234_dev *sensor)
 
 	ret = i2c_transfer(client->adapter, msg, 1);
 	if (ret < 0) {
-		//dev_err(&client->dev, "%s: wait\n", __func__);
 		return ret;
 	}
 	return 0;

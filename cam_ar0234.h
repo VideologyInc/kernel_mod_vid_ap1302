@@ -66,9 +66,6 @@
 #define V4L2_CID_PROC_BLA			(V4L2_CID_PROC_CAM_AR0234+0)
 #define V4L2_CID_PROC_BLA1			(V4L2_CID_PROC_CAM_AR0234+1)
 
-
-
-
 struct resolution {
 	u16 width;
 	u16 height;
@@ -164,9 +161,6 @@ struct gs_ar0234_dev {
 	u8  sensor_type;
 	int csi_id;
 };
-
-
-
 
 
 #endif // INCLUDES_CAM_AR0234_H_

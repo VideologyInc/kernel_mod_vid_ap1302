@@ -314,12 +314,10 @@ int write_isp_buffer(struct gs_ar0234_dev *sensor, char * buffer, int size, u32 
         if (strstarts(nextptr, "// CRC")) {
             findptr = strchr(nextptr, (int)'x'); // find 1st 'x' ptr.
             *crc = strtoul(findptr+1, NULL, 16);
-            //printk("DEBUG: crc: %X\n", *crc);
         }
         else if (strstarts(nextptr, "// Size")) {
             findptr = strchr(nextptr, (int)'x'); // find 1st 'x' ptr.
             *binsize = strtoul(findptr+1, NULL, 16);
-            //printk("DEBUG: size: %X\n", *binsize);
         }
         else if (strstarts(nextptr, "//")) {;}
         else if (strstarts(nextptr, "[TOTALSIZE")) {;}
@@ -366,7 +364,6 @@ int flashisp(struct gs_ar0234_dev *sensor, char * buffer, int size)
 	}
 
     // set pass
-    //pr_debug("---%s: ppp\n", __func__);
     ret = gs_set_password(sensor, PPP);
     if (ret < 0) {
         dev_err(&client->dev, "%s: error: password err=%d\n", __func__, ret);
@@ -384,7 +381,6 @@ int flashisp(struct gs_ar0234_dev *sensor, char * buffer, int size)
     //ret = gs_get_spi_id(struct gs_ar0234_dev *sensor, 0x9F, u8 * mf, u16 * id); // cmd:  (0x9F = JEDEC) or (0x90 =ID)
 
     // Check the SPI status
-    //pr_debug("---%s: get flash status\n", __func__);
     ret = gs_get_spistatus(sensor, &status);
     if (ret < 0) {
 		dev_err(&client->dev, "%s: error: flash status %04X err=%d\n", __func__, status, ret);
