@@ -82,13 +82,7 @@ def main():
 
 	gsi2c.dummy(args.dummy)
 
-	if args.iic == 0:
-		gsi2c.i2c = I2C("/dev/links/csi0_i2c")
-	elif args.iic == 1:
-		gsi2c.i2c = I2C("/dev/links/csi1_i2c")
-	else:
-		print("wrong i2c bus!\n")
-		return
+	gsi2c.i2c = I2C(args.iic)
 
 	ispsize, mybytebuff = readfile(args.filename)
 
