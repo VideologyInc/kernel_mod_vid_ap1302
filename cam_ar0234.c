@@ -140,7 +140,7 @@ static int ops_get_fmt(struct v4l2_subdev *sub_dev, struct v4l2_subdev_state *sd
 	struct gs_ar0234_dev *sensor = to_gs_ar0234_dev(sub_dev);
 	struct v4l2_mbus_framefmt *fmt;
 
-	dev_dbg(sub_dev->dev, "%s: \n", __func__);
+	dev_dbg(sub_dev->dev, "-> %s: \n", __func__);
 
 	if (format->pad >= NUM_PADS)
 		return -EINVAL;
@@ -151,6 +151,8 @@ static int ops_get_fmt(struct v4l2_subdev *sub_dev, struct v4l2_subdev_state *sd
 		fmt = &sensor->fmt;
 
 	format->format = *fmt;
+	dev_dbg(sub_dev->dev, "<- %s: %dx%d\n", __func__, fmt->width, fmt->height);
+
 	return 0;
 }
 
@@ -1295,18 +1297,38 @@ free_ctrls:
 	return ret;
 }
 
+static int gs_ar0234_code_supported(u32 code)
+{
+	switch(code){
+		case MEDIA_BUS_FMT_YUYV8_1X16: //2011
+		//case MEDIA_BUS_FMT_UYVY8_1X16: //200f
+		case MEDIA_BUS_FMT_YUV8_1X24: //2025
+		case MEDIA_BUS_FMT_RGB888_1X24: //100a
+		case MEDIA_BUS_FMT_RGB565_1X16: //1017
+		case MEDIA_BUS_FMT_RGB555_2X8_PADHI_LE: //1004
+		case MEDIA_BUS_FMT_JPEG_1X8: // 14001
+		case MEDIA_BUS_FMT_SRGGB16_1X16: //3020
+		case MEDIA_BUS_FMT_SRGGB12_1X12: //3012
+		case MEDIA_BUS_FMT_SRGGB10_1X10: //300f
+		case MEDIA_BUS_FMT_SRGGB8_1X8: //3014
+			return 1;
+		default:
+			return 0;
+	}
+}
+
 static int ops_enum_frame_size(struct v4l2_subdev *sub_dev, struct v4l2_subdev_state *sd_state, struct v4l2_subdev_frame_size_enum *fse)
 {
-	struct gs_ar0234_dev *sensor = to_gs_ar0234_dev(sub_dev);
 	struct resolution res = {.width=U16_MAX, .height=U16_MAX};
 	int i, unique=0;
 
+	//dev_dbg(sub_dev->dev, "%s (fmt.code: 0x%04x)\n", __func__, fse->code);
+
 	if (fse->pad >= NUM_PADS)
 		return -EINVAL;
-	if (fse->code != sensor->fmt.code) {
-		dev_dbg_ratelimited(sub_dev->dev, "%s unsupported fmt.code: 0x%04x.\n", __func__, fse->code);
+
+	if( gs_ar0234_code_supported(fse->code) == 0)
 		return -EINVAL;
-	}
 
 	// return the unique resoluitons.
 	for(i = 0 ; i < ARRAY_SIZE(sensor_res_list) ; i++) {
@@ -1325,16 +1347,13 @@ static int ops_enum_frame_size(struct v4l2_subdev *sub_dev, struct v4l2_subdev_s
 
 static int ops_enum_frame_interval(struct v4l2_subdev *sub_dev, struct v4l2_subdev_state *sd_state, struct v4l2_subdev_frame_interval_enum *fie)
 {
-	struct gs_ar0234_dev *sensor = to_gs_ar0234_dev(sub_dev);
 	int i, count=0;
 
 	if (fie->pad >= NUM_PADS)
 		return -EINVAL;
-	// only suports MEDIA_BUS_FMT_YUYV8_1X16
-	if (fie->code != sensor->fmt.code) {
-		dev_dbg_ratelimited(sub_dev->dev, "%s unsupported fmt.code: 0x%04x.\n", __func__, fie->code);
+
+	if( gs_ar0234_code_supported(fie->code) == 0)
 		return -EINVAL;
-	}
 
 	if (fie->width == 0 || fie->height == 0 || fie->code == 0) {
 		dev_err_ratelimited(sub_dev->dev, "%s Please assign pix-fmt & resolution before enum framerates.\n", __func__);
@@ -1388,10 +1407,12 @@ static int ops_set_frame_interval(struct v4l2_subdev *sub_dev, struct v4l2_subde
 	return -EINVAL;
 }
 
+
+
 static int gs_ar0234_enum_mbus_code(struct v4l2_subdev *sub_dev, struct v4l2_subdev_state *sd_state, struct v4l2_subdev_mbus_code_enum *code)
 {
 	int ret = 0;
-	dev_dbg_ratelimited(sub_dev->dev, "%s: \n", __func__);
+	dev_dbg_ratelimited(sub_dev->dev, "%s: code->code = 0x%08x\n", __func__, code->code);
 
 	if ((code->pad >= NUM_PADS))
 		return -EINVAL;
@@ -1403,13 +1424,14 @@ static int gs_ar0234_enum_mbus_code(struct v4l2_subdev *sub_dev, struct v4l2_sub
 		case 	GS_CF_YUV422BT:
 		case 	GS_CF_YUV420BT:
 		case 	GS_CF_YUV400BT:
-			code->code = MEDIA_BUS_FMT_YUYV8_1X16;
+			code->code = MEDIA_BUS_FMT_YUYV8_1X16; //MEDIA_BUS_FMT_YUYV8_1X16
+			//code->code = MEDIA_BUS_FMT_UYVY8_1X16; //MEDIA_BUS_FMT_UYVY8_1X16
 			break;
 		case 	GS_CF_RGB_888:
-			code->code = MEDIA_BUS_FMT_RGB888_3X8;
+			code->code = MEDIA_BUS_FMT_RGB888_1X24;
 			break;
 		case 	GS_CF_RGB_565:
-			code->code = MEDIA_BUS_FMT_RGB565_2X8_LE;
+			code->code = MEDIA_BUS_FMT_RGB565_1X16;
 			break;
 		case 	GS_CF_RGB_555:
 			code->code = MEDIA_BUS_FMT_RGB555_2X8_PADHI_LE;
@@ -1436,7 +1458,6 @@ static int gs_ar0234_enum_mbus_code(struct v4l2_subdev *sub_dev, struct v4l2_sub
 			ret = -EINVAL;
 			break;
 	}
-	dev_dbg_ratelimited(sub_dev->dev, "%s: code->code = 0x%08x\n", __func__, code->code);
 	return ret;
 }
 
@@ -1709,7 +1730,7 @@ static int gs_ar0234_probe(struct i2c_client *client, const struct i2c_device_id
 
 	// default init sequence initialize sensor to 1080p30 YUV422 UYVY
 	fmt = &sensor->fmt;
-	fmt->code = MEDIA_BUS_FMT_UYVY8_1X16; // MEDIA_BUS_FMT_UYVY8_2X8
+	fmt->code = MEDIA_BUS_FMT_YUYV8_1X16; // 
 	fmt->colorspace = V4L2_COLORSPACE_SRGB;
 	fmt->ycbcr_enc = V4L2_MAP_YCBCR_ENC_DEFAULT(fmt->colorspace);
 	fmt->quantization = V4L2_QUANTIZATION_FULL_RANGE;
