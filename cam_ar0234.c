@@ -73,41 +73,78 @@ static int gs_print_params(void)
 
 static int gs_ar0234_i_cntrl(struct gs_ar0234_dev *sensor);
 
+
+// width must be dividable by 16 ???
 static struct resolution sensor_res_list[] = {
-	{.width = 1280, .height = 720,  .framerate = 25, .frame_format_code = 12, .name="720p25"  },
-	{.width = 1280, .height = 720,  .framerate = 30, .frame_format_code = 12, .name="720p30"  },
-	{.width = 1280, .height = 720,  .framerate = 50, .frame_format_code = 12, .name="720p50"  },
-	{.width = 1280, .height = 720,  .framerate = 60, .frame_format_code = 12, .name="720p60"  },
-
-	{.width = 1280, .height = 960,  .framerate = 25, .frame_format_code = 9, .name="960p25"  },
-	{.width = 1280, .height = 960,  .framerate = 30, .frame_format_code = 9, .name="960p30"  },
-	{.width = 1280, .height = 960,  .framerate = 50, .frame_format_code = 9, .name="960p50"  },
-	{.width = 1280, .height = 960,  .framerate = 60, .frame_format_code = 9, .name="960p60"  },
-
-	{.width = 1920, .height = 1080, .framerate = 25, .frame_format_code = 3, .name="1080p25" },
+	{.width = 1920, .height = 1080, .framerate = 25, .frame_format_code = 3, .name="1080p25" },  // 16:9
 	{.width = 1920, .height = 1080, .framerate = 30, .frame_format_code = 3, .name="1080p30" },
 	{.width = 1920, .height = 1080, .framerate = 50, .frame_format_code = 3, .name="1080p50" },
 	{.width = 1920, .height = 1080, .framerate = 60, .frame_format_code = 3, .name="1080p60" },
 
-	{.width = 1440, .height = 1080, .framerate = 25, .frame_format_code = 4, .name="1080x1080@25" },
-	{.width = 1440, .height = 1080, .framerate = 30, .frame_format_code = 4, .name="1080x1080@30" },
-	{.width = 1440, .height = 1080, .framerate = 50, .frame_format_code = 4, .name="1080x1080@50" },
-	{.width = 1440, .height = 1080, .framerate = 60, .frame_format_code = 4, .name="1080x1080@60" },
+	{.width = 1440, .height = 1080, .framerate = 25, .frame_format_code = 4, .name="1440x1080@25" }, // 4:3
+	{.width = 1440, .height = 1080, .framerate = 30, .frame_format_code = 4, .name="1440x1080@30" },
+	{.width = 1440, .height = 1080, .framerate = 50, .frame_format_code = 4, .name="1440x1080@50" },
+	{.width = 1440, .height = 1080, .framerate = 60, .frame_format_code = 4, .name="1440x1080@60" },
 
-	{.width = 1080, .height = 1080, .framerate = 25, .frame_format_code = 5, .name="1080x1080@25" },
-	{.width = 1080, .height = 1080, .framerate = 30, .frame_format_code = 5, .name="1080x1080@30" },
-	{.width = 1080, .height = 1080, .framerate = 50, .frame_format_code = 5, .name="1080x1080@50" },
-	{.width = 1080, .height = 1080, .framerate = 60, .frame_format_code = 5, .name="1080x1080@60" },
+	//{.width = 1080, .height = 1080, .framerate = 25, .frame_format_code = 5, .name="1080x1080@25" }, // 1:1
+	//{.width = 1080, .height = 1080, .framerate = 30, .frame_format_code = 5, .name="1080x1080@30" },
+	//{.width = 1080, .height = 1080, .framerate = 50, .frame_format_code = 5, .name="1080x1080@50" },
+	//{.width = 1080, .height = 1080, .framerate = 60, .frame_format_code = 5, .name="1080x1080@60" },
 
-	{.width = 1024, .height = 1024, .framerate = 25, .frame_format_code = 11, .name="1024x1024@25" },
-	{.width = 1024, .height = 1024, .framerate = 30, .frame_format_code = 11, .name="1024x1024@30" },
-	{.width = 1024, .height = 1024, .framerate = 50, .frame_format_code = 11, .name="1024x1024@50" },
-	{.width = 1024, .height = 1024, .framerate = 60, .frame_format_code = 11, .name="1024x1024@60" },
+	//{.width = 1366, .height = 1024, .framerate = 25, .frame_format_code = 6, .name="1366x1024@25" }, // 4:3
+	//{.width = 1366, .height = 1024, .framerate = 30, .frame_format_code = 6, .name="1366x1024@30" },
+	//{.width = 1366, .height = 1024, .framerate = 50, .frame_format_code = 6, .name="1366x1024@50" },
+	//{.width = 1366, .height = 1024, .framerate = 60, .frame_format_code = 6, .name="1366x1024@60" },
 
-	{.width = 1280, .height = 1024, .framerate = 25, .frame_format_code = 7, .name="1280x1024@25" },
+	{.width = 1280, .height = 1024, .framerate = 25, .frame_format_code = 7, .name="1280x1024@25" }, // 5:4
 	{.width = 1280, .height = 1024, .framerate = 30, .frame_format_code = 7, .name="1280x1024@30" },
 	{.width = 1280, .height = 1024, .framerate = 50, .frame_format_code = 7, .name="1280x1024@50" },
 	{.width = 1280, .height = 1024, .framerate = 60, .frame_format_code = 7, .name="1280x1024@60" },
+
+	{.width = 1024, .height = 1024, .framerate = 25, .frame_format_code = 8, .name="1024x1024@25" }, // 1:1
+	{.width = 1024, .height = 1024, .framerate = 30, .frame_format_code = 8, .name="1024x1024@30" },
+	{.width = 1024, .height = 1024, .framerate = 50, .frame_format_code = 8, .name="1024x1024@50" },
+	{.width = 1024, .height = 1024, .framerate = 60, .frame_format_code = 8, .name="1024x1024@60" },
+
+	{.width = 1280, .height = 960,  .framerate = 25, .frame_format_code = 9, .name="960p25"  }, // 4:3
+	{.width = 1280, .height = 960,  .framerate = 30, .frame_format_code = 9, .name="960p30"  },
+	{.width = 1280, .height = 960,  .framerate = 50, .frame_format_code = 9, .name="960p50"  },
+	{.width = 1280, .height = 960,  .framerate = 60, .frame_format_code = 9, .name="960p60"  },
+
+	//{.width = 1366, .height = 768, .framerate = 25, .frame_format_code = 10, .name="1366x768@25" }, // 16:9
+	//{.width = 1366, .height = 768, .framerate = 30, .frame_format_code = 10, .name="1366x768@30" },
+	//{.width = 1366, .height = 768, .framerate = 50, .frame_format_code = 10, .name="1366x768@50" },
+	//{.width = 1366, .height = 768, .framerate = 60, .frame_format_code = 10, .name="1366x768@60" },
+
+	{.width = 1024, .height = 768, .framerate = 25, .frame_format_code = 11, .name="1024x768@25" }, // 1:1
+	{.width = 1024, .height = 768, .framerate = 30, .frame_format_code = 11, .name="1024x768@30" },
+	{.width = 1024, .height = 768, .framerate = 50, .frame_format_code = 11, .name="1024x768@50" },
+	{.width = 1024, .height = 768, .framerate = 60, .frame_format_code = 11, .name="1024x768@60" },
+
+	{.width = 1280, .height = 720,  .framerate = 25, .frame_format_code = 12, .name="720p25"  }, // 16:9
+	{.width = 1280, .height = 720,  .framerate = 30, .frame_format_code = 12, .name="720p30"  },
+	{.width = 1280, .height = 720,  .framerate = 50, .frame_format_code = 12, .name="720p50"  },
+	{.width = 1280, .height = 720,  .framerate = 60, .frame_format_code = 12, .name="720p60"  },
+
+	{.width = 960, .height = 720,  .framerate = 25, .frame_format_code = 13, .name="960x720p25"  }, // 4:3
+	{.width = 960, .height = 720,  .framerate = 30, .frame_format_code = 13, .name="960x720p30"  },
+	{.width = 960, .height = 720,  .framerate = 50, .frame_format_code = 13, .name="960x720p50"  },
+	{.width = 960, .height = 720,  .framerate = 60, .frame_format_code = 13, .name="960x720p60"  },
+
+	{.width = 960, .height = 540,  .framerate = 25, .frame_format_code = 16, .name="960x540p25"  }, // 16:9
+	{.width = 960, .height = 540,  .framerate = 30, .frame_format_code = 16, .name="960x540p30"  },
+	{.width = 960, .height = 540,  .framerate = 50, .frame_format_code = 16, .name="960x540p50"  },
+	{.width = 960, .height = 540,  .framerate = 60, .frame_format_code = 16, .name="960x540p60"  },
+
+	{.width = 720, .height = 540,  .framerate = 25, .frame_format_code = 17, .name="720x540p25"  }, // 4:3
+	{.width = 720, .height = 540,  .framerate = 30, .frame_format_code = 17, .name="720x540p30"  },
+	{.width = 720, .height = 540,  .framerate = 50, .frame_format_code = 17, .name="720x540p50"  },
+	{.width = 720, .height = 540,  .framerate = 60, .frame_format_code = 17, .name="720x540p60"  },
+
+	{.width = 640, .height = 480,  .framerate = 25, .frame_format_code = 19, .name="640x480p25"  }, // 4:3
+	{.width = 640, .height = 480,  .framerate = 30, .frame_format_code = 19, .name="640x480p30"  },
+	{.width = 640, .height = 480,  .framerate = 50, .frame_format_code = 19, .name="640x480p50"  },
+	{.width = 640, .height = 480,  .framerate = 60, .frame_format_code = 19, .name="640x480p60"  },
 };
 
 static inline struct gs_ar0234_dev *to_gs_ar0234_dev(struct v4l2_subdev *sd)
