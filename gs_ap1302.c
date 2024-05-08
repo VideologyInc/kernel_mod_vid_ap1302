@@ -680,7 +680,7 @@ int gs_get_spistatus(struct gs_ar0234_dev *sensor, u16 * status)
 {
 	struct i2c_client *client = sensor->i2c_client;
 	struct i2c_msg msg[2];
-	u8 mybuf[0];
+	u8 mybuf[2];
 	int ret;
 
 	mybuf[0] = 0x45;
@@ -970,7 +970,7 @@ int gs_boot_id(struct gs_ar0234_dev *sensor, u16 * id)
 {
 	struct i2c_client *client = sensor->i2c_client;
 	struct i2c_msg msg[2];
-	u8 mybuf[0];
+	u8 mybuf[2];
 	int ret;
 
 	mybuf[0] = 0x47;
@@ -1000,7 +1000,7 @@ int gs_boot_cameratype(struct gs_ar0234_dev *sensor, u8 * type)
 {
 	struct i2c_client *client = sensor->i2c_client;
 	struct i2c_msg msg[2];
-	u8 mybuf[0];
+	u8 mybuf[2];
 	int ret;
 
 	mybuf[0] = 0xF1;
