@@ -801,7 +801,7 @@ static const struct v4l2_ctrl_config noise_red = {
         .flags = V4L2_CTRL_FLAG_SLIDER,
 		.min = -32768,
         .max = 32767,
-        .step = 1,
+        .step = 256,
 		.def = 0,
 };
 
@@ -1173,10 +1173,10 @@ static int gs_ar0234_init_controls(struct gs_ar0234_dev *sensor)
 
 	/* auto/manual exposure*/
 	ctrls->auto_exp = v4l2_ctrl_new_std_menu(hdl, ops, V4L2_CID_EXPOSURE_AUTO, V4L2_EXPOSURE_APERTURE_PRIORITY, 0, V4L2_EXPOSURE_AUTO);
-	ctrls->brightness = v4l2_ctrl_new_std(hdl, ops, V4L2_CID_BRIGHTNESS, -32768, 32767, 1, 0);
+	ctrls->brightness = v4l2_ctrl_new_std(hdl, ops, V4L2_CID_BRIGHTNESS, -4096, 4096, 32, 0);
 	//ctrls->brightness->flags |= V4L2_CTRL_FLAG_VOLATILE;
 	ctrls->exposure_absolute = v4l2_ctrl_new_std(hdl, ops, V4L2_CID_EXPOSURE_ABSOLUTE , 0, 0xFFFF, 1, 333);
-	ctrls->exposure = v4l2_ctrl_new_std(hdl, ops, V4L2_CID_EXPOSURE , -32768,  32767, 1, -2200);
+	ctrls->exposure = v4l2_ctrl_new_std(hdl, ops, V4L2_CID_EXPOSURE , -8192,  2048, 40, -2192);
 	ctrls->gain = v4l2_ctrl_new_std(hdl, ops, V4L2_CID_GAIN , 0x100,  32767, 1, 0x100);
 	ctrls->exposure_metering = v4l2_ctrl_new_std_menu(hdl, ops, V4L2_CID_EXPOSURE_METERING, V4L2_EXPOSURE_METERING_MATRIX, 0, V4L2_EXPOSURE_METERING_CENTER_WEIGHTED);
 	ctrls->blc_level = v4l2_ctrl_new_std(hdl, ops, V4L2_CID_BACKLIGHT_COMPENSATION , 0,  0x80, 1, 0);
@@ -1210,16 +1210,16 @@ static int gs_ar0234_init_controls(struct gs_ar0234_dev *sensor)
 	// ctrls->auto_gain = v4l2_ctrl_new_std(hdl, ops, V4L2_CID_AUTOGAIN, 0, 1, 1, 1);
 
 	/* basic */
-	ctrls->saturation = v4l2_ctrl_new_std(hdl, ops, V4L2_CID_SATURATION, 0, 0x2000, 1, 0x1000);
-	ctrls->contrast = v4l2_ctrl_new_std(hdl, ops, V4L2_CID_CONTRAST, -32768, 32767, 1, 0);
+	ctrls->saturation = v4l2_ctrl_new_std(hdl, ops, V4L2_CID_SATURATION, 0, 0x2000, 32, 0x1000);
+	ctrls->contrast = v4l2_ctrl_new_std(hdl, ops, V4L2_CID_CONTRAST, -32768, 32767, 256, 0);
 	ctrls->hflip = v4l2_ctrl_new_std(hdl, ops, V4L2_CID_HFLIP, 0, 1, 1, 0);
 	ctrls->vflip = v4l2_ctrl_new_std(hdl, ops, V4L2_CID_VFLIP, 0, 1, 1, 0);
-	ctrls->sharpness = v4l2_ctrl_new_std(hdl, ops, V4L2_CID_SHARPNESS, -32768, 32767, 1, 0);
-	ctrls->gamma = v4l2_ctrl_new_std(hdl, ops, V4L2_CID_GAMMA, 0, 0x7FFF, 1, 0);
+	ctrls->sharpness = v4l2_ctrl_new_std(hdl, ops, V4L2_CID_SHARPNESS, -32768, 32767, 256, 0);
+	ctrls->gamma = v4l2_ctrl_new_std(hdl, ops, V4L2_CID_GAMMA, 0, 0x7FFF, 128, 0);
 	ctrls->noise_red = v4l2_ctrl_new_custom(hdl, &noise_red, NULL);
 
 	/* zoom/pan/tilt */
-	ctrls->zoom = v4l2_ctrl_new_std(hdl, ops, V4L2_CID_ZOOM_ABSOLUTE, 0, 0x7FFF, 1, 0x0100);
+	ctrls->zoom = v4l2_ctrl_new_std(hdl, ops, V4L2_CID_ZOOM_ABSOLUTE, 0, 0x2800, 1, 0x0100);
 	ctrls->pan = v4l2_ctrl_new_std(hdl, ops, V4L2_CID_PAN_ABSOLUTE, 0, 0x80, 1, 0x40);
 	ctrls->tilt = v4l2_ctrl_new_std(hdl, ops, V4L2_CID_TILT_ABSOLUTE, 0, 0x80, 1, 0x40);
 	ctrls->zoom_speed = v4l2_ctrl_new_custom(hdl, &zoom_speed, NULL);
