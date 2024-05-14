@@ -150,7 +150,7 @@ struct gs_ar0234_dev {
 	struct mutex probe_lock;
 	struct v4l2_mbus_framefmt fmt;
 	struct gs_ar0234_ctrls ctrls;
-	const struct resolution *mode;
+	//const struct resolution *mode;
 	int mbus_num;
 	int framerate;
 	int firmware_loaded;

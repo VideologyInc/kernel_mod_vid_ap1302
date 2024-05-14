@@ -4,7 +4,7 @@
 #ifndef INCLUDES_GS_AP1302_H_
 #define INCLUDES_GS_AP1302_H_
 
-#define I2C_RETRIES 200
+#define I2C_RETRIES 300
 
 #define GS_POWER_UP 		1
 #define GS_POWER_DOWN 		0

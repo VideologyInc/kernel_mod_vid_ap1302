@@ -73,80 +73,6 @@ static int gs_print_params(void)
 
 static int gs_ar0234_i_cntrl(struct gs_ar0234_dev *sensor);
 
-
-// width must be dividable by 16 ???
-static struct resolution sensor_res_list[] = {
-	{.width = 1920, .height = 1080, .framerate = 25, .frame_format_code = 3, .name="1080p25" },  // 16:9
-	{.width = 1920, .height = 1080, .framerate = 30, .frame_format_code = 3, .name="1080p30" },
-	{.width = 1920, .height = 1080, .framerate = 50, .frame_format_code = 3, .name="1080p50" },
-	{.width = 1920, .height = 1080, .framerate = 60, .frame_format_code = 3, .name="1080p60" },
-
-	{.width = 1440, .height = 1080, .framerate = 25, .frame_format_code = 4, .name="1440x1080@25" }, // 4:3
-	{.width = 1440, .height = 1080, .framerate = 30, .frame_format_code = 4, .name="1440x1080@30" },
-	{.width = 1440, .height = 1080, .framerate = 50, .frame_format_code = 4, .name="1440x1080@50" },
-	{.width = 1440, .height = 1080, .framerate = 60, .frame_format_code = 4, .name="1440x1080@60" },
-
-	//{.width = 1080, .height = 1080, .framerate = 25, .frame_format_code = 5, .name="1080x1080@25" }, // 1:1
-	//{.width = 1080, .height = 1080, .framerate = 30, .frame_format_code = 5, .name="1080x1080@30" },
-	//{.width = 1080, .height = 1080, .framerate = 50, .frame_format_code = 5, .name="1080x1080@50" },
-	//{.width = 1080, .height = 1080, .framerate = 60, .frame_format_code = 5, .name="1080x1080@60" },
-
-	//{.width = 1366, .height = 1024, .framerate = 25, .frame_format_code = 6, .name="1366x1024@25" }, // 4:3
-	//{.width = 1366, .height = 1024, .framerate = 30, .frame_format_code = 6, .name="1366x1024@30" },
-	//{.width = 1366, .height = 1024, .framerate = 50, .frame_format_code = 6, .name="1366x1024@50" },
-	//{.width = 1366, .height = 1024, .framerate = 60, .frame_format_code = 6, .name="1366x1024@60" },
-
-	{.width = 1280, .height = 1024, .framerate = 25, .frame_format_code = 7, .name="1280x1024@25" }, // 5:4
-	{.width = 1280, .height = 1024, .framerate = 30, .frame_format_code = 7, .name="1280x1024@30" },
-	{.width = 1280, .height = 1024, .framerate = 50, .frame_format_code = 7, .name="1280x1024@50" },
-	{.width = 1280, .height = 1024, .framerate = 60, .frame_format_code = 7, .name="1280x1024@60" },
-
-	{.width = 1024, .height = 1024, .framerate = 25, .frame_format_code = 8, .name="1024x1024@25" }, // 1:1
-	{.width = 1024, .height = 1024, .framerate = 30, .frame_format_code = 8, .name="1024x1024@30" },
-	{.width = 1024, .height = 1024, .framerate = 50, .frame_format_code = 8, .name="1024x1024@50" },
-	{.width = 1024, .height = 1024, .framerate = 60, .frame_format_code = 8, .name="1024x1024@60" },
-
-	{.width = 1280, .height = 960,  .framerate = 25, .frame_format_code = 9, .name="960p25"  }, // 4:3
-	{.width = 1280, .height = 960,  .framerate = 30, .frame_format_code = 9, .name="960p30"  },
-	{.width = 1280, .height = 960,  .framerate = 50, .frame_format_code = 9, .name="960p50"  },
-	{.width = 1280, .height = 960,  .framerate = 60, .frame_format_code = 9, .name="960p60"  },
-
-	//{.width = 1366, .height = 768, .framerate = 25, .frame_format_code = 10, .name="1366x768@25" }, // 16:9
-	//{.width = 1366, .height = 768, .framerate = 30, .frame_format_code = 10, .name="1366x768@30" },
-	//{.width = 1366, .height = 768, .framerate = 50, .frame_format_code = 10, .name="1366x768@50" },
-	//{.width = 1366, .height = 768, .framerate = 60, .frame_format_code = 10, .name="1366x768@60" },
-
-	{.width = 1024, .height = 768, .framerate = 25, .frame_format_code = 11, .name="1024x768@25" }, // 1:1
-	{.width = 1024, .height = 768, .framerate = 30, .frame_format_code = 11, .name="1024x768@30" },
-	{.width = 1024, .height = 768, .framerate = 50, .frame_format_code = 11, .name="1024x768@50" },
-	{.width = 1024, .height = 768, .framerate = 60, .frame_format_code = 11, .name="1024x768@60" },
-
-	{.width = 1280, .height = 720,  .framerate = 25, .frame_format_code = 12, .name="720p25"  }, // 16:9
-	{.width = 1280, .height = 720,  .framerate = 30, .frame_format_code = 12, .name="720p30"  },
-	{.width = 1280, .height = 720,  .framerate = 50, .frame_format_code = 12, .name="720p50"  },
-	{.width = 1280, .height = 720,  .framerate = 60, .frame_format_code = 12, .name="720p60"  },
-
-	{.width = 960, .height = 720,  .framerate = 25, .frame_format_code = 13, .name="960x720p25"  }, // 4:3
-	{.width = 960, .height = 720,  .framerate = 30, .frame_format_code = 13, .name="960x720p30"  },
-	{.width = 960, .height = 720,  .framerate = 50, .frame_format_code = 13, .name="960x720p50"  },
-	{.width = 960, .height = 720,  .framerate = 60, .frame_format_code = 13, .name="960x720p60"  },
-
-	{.width = 960, .height = 540,  .framerate = 25, .frame_format_code = 16, .name="960x540p25"  }, // 16:9
-	{.width = 960, .height = 540,  .framerate = 30, .frame_format_code = 16, .name="960x540p30"  },
-	{.width = 960, .height = 540,  .framerate = 50, .frame_format_code = 16, .name="960x540p50"  },
-	{.width = 960, .height = 540,  .framerate = 60, .frame_format_code = 16, .name="960x540p60"  },
-
-	{.width = 720, .height = 540,  .framerate = 25, .frame_format_code = 17, .name="720x540p25"  }, // 4:3
-	{.width = 720, .height = 540,  .framerate = 30, .frame_format_code = 17, .name="720x540p30"  },
-	{.width = 720, .height = 540,  .framerate = 50, .frame_format_code = 17, .name="720x540p50"  },
-	{.width = 720, .height = 540,  .framerate = 60, .frame_format_code = 17, .name="720x540p60"  },
-
-	{.width = 640, .height = 480,  .framerate = 25, .frame_format_code = 19, .name="640x480p25"  }, // 4:3
-	{.width = 640, .height = 480,  .framerate = 30, .frame_format_code = 19, .name="640x480p30"  },
-	{.width = 640, .height = 480,  .framerate = 50, .frame_format_code = 19, .name="640x480p50"  },
-	{.width = 640, .height = 480,  .framerate = 60, .frame_format_code = 19, .name="640x480p60"  },
-};
-
 static inline struct gs_ar0234_dev *to_gs_ar0234_dev(struct v4l2_subdev *sd)
 {
 	return container_of(sd, struct gs_ar0234_dev, sd);
@@ -177,8 +103,7 @@ static int ops_get_fmt(struct v4l2_subdev *sub_dev, struct v4l2_subdev_state *sd
 	struct gs_ar0234_dev *sensor = to_gs_ar0234_dev(sub_dev);
 	struct v4l2_mbus_framefmt *fmt;
 
-	dev_dbg(sub_dev->dev, "-> %s: \n", __func__);
-
+	dev_dbg(sub_dev->dev, "-> %s: pad: %d\n", __func__, format->pad);
 	if (format->pad >= NUM_PADS)
 		return -EINVAL;
 
@@ -196,44 +121,32 @@ static int ops_get_fmt(struct v4l2_subdev *sub_dev, struct v4l2_subdev_state *sd
 static int gs_ar0234_set_fmt(struct v4l2_subdev *sd, struct v4l2_subdev_state *sd_state, struct v4l2_subdev_format *format)
 {
 	struct gs_ar0234_dev *sensor = to_gs_ar0234_dev(sd);
-	const struct resolution *new_mode = NULL;
 	struct v4l2_mbus_framefmt *fmt = &format->format;
-	int ret=0, i;
+	int ret=0;
 
-	dev_info(sensor->dev, "%s \n",__func__);
+	//dev_info(sensor->dev, "%s %dx%d\n",__func__,format->format.width, format->format.height);
+	dev_info(sensor->dev, "%s %dx%d\n",__func__, fmt->width, fmt->height);
 
 	if (format->pad >= NUM_PADS)
 		return -EINVAL;
 
-	for (i = 0; i < ARRAY_SIZE(sensor_res_list); i++) {
-		if (format->format.width == sensor_res_list[i].width && format->format.height == sensor_res_list[i].height) {
-			new_mode = &sensor_res_list[i];		// set mode here so illegal framerate just gets assigned a legal one.
-			// a previous call to ops_set_frame_interval would have set sensor->framerate. Otherwise its the existing FR.
-			if (sensor->framerate == sensor_res_list[i].framerate)
-				break;
-		}
-	}
-	if (new_mode == NULL)
-		return -EINVAL;
-
-
-	/////////////////////////////////////////////////////////////////////////////////
-
-	sensor->framerate = new_mode->framerate;
-
+#if 1 //why?
 	if (format->which == V4L2_SUBDEV_FORMAT_TRY)
 		fmt = v4l2_subdev_get_try_format(sd, sd_state, 0);
 	else
 		fmt = &sensor->fmt;
 
 	*fmt = format->format;
+#endif
 
-	sensor->mode = new_mode;
+	sensor->fmt.height = format->format.height;
+	sensor->fmt.width = format->format.width;
 
-	pr_debug("%s: sensor->ep.bus_type =%d\n", __func__, sensor->ep.bus_type);
-	pr_debug("%s: sensor->ep.bus      =%p\n", __func__, &sensor->ep.bus);
-	pr_debug("%s: sensor->fmt->height =%d\n", __func__, format->format.height);
-	pr_debug("%s: sensor->fmt->width  =%d\n", __func__, format->format.width);
+	pr_debug("%s: sensor->ep.bus_type = %d\n", __func__, sensor->ep.bus_type);
+	pr_debug("%s: sensor->ep.bus      = %p\n", __func__, &sensor->ep.bus);
+	pr_debug("%s: sensor->fmt.height  = %d\n", __func__, sensor->fmt.height);
+	pr_debug("%s: sensor->fmt.width   = %d\n", __func__, sensor->fmt.width);
+	pr_debug("%s: sensor->framerate   = %d\n", __func__, sensor->framerate);
 	pr_debug("%s: end \n", __func__);
 	return ret;
 }
@@ -1338,8 +1251,8 @@ static int gs_ar0234_code_supported(u32 code)
 {
 	switch(code){
 		case MEDIA_BUS_FMT_YUYV8_1X16: //2011
-		//case MEDIA_BUS_FMT_UYVY8_1X16: //200f
-		case MEDIA_BUS_FMT_YUV8_1X24: //2025
+		case MEDIA_BUS_FMT_UYVY8_1X16: //200f
+		// case MEDIA_BUS_FMT_YUV8_1X24: //2025
 		case MEDIA_BUS_FMT_RGB888_1X24: //100a
 		case MEDIA_BUS_FMT_RGB565_1X16: //1017
 		case MEDIA_BUS_FMT_RGB555_2X8_PADHI_LE: //1004
@@ -1356,10 +1269,7 @@ static int gs_ar0234_code_supported(u32 code)
 
 static int ops_enum_frame_size(struct v4l2_subdev *sub_dev, struct v4l2_subdev_state *sd_state, struct v4l2_subdev_frame_size_enum *fse)
 {
-	struct resolution res = {.width=U16_MAX, .height=U16_MAX};
-	int i, unique=0;
-
-	//dev_dbg(sub_dev->dev, "%s (fmt.code: 0x%04x)\n", __func__, fse->code);
+	dev_dbg(sub_dev->dev, "%s (fmt.code: 0x%04x)\n", __func__, fse->code);
 
 	if (fse->pad >= NUM_PADS)
 		return -EINVAL;
@@ -1367,79 +1277,65 @@ static int ops_enum_frame_size(struct v4l2_subdev *sub_dev, struct v4l2_subdev_s
 	if( gs_ar0234_code_supported(fse->code) == 0)
 		return -EINVAL;
 
-	// return the unique resoluitons.
-	for(i = 0 ; i < ARRAY_SIZE(sensor_res_list) ; i++) {
-		if(res.width != sensor_res_list[i].width || res.height != sensor_res_list[i].height) {
-			res = sensor_res_list[i];
-			if (fse->index == unique++) {
-				fse->min_width  = fse->max_width  = res.width;
-				fse->min_height = fse->max_height = res.height;
-				dev_dbg_ratelimited(sub_dev->dev, "%s: offer size WxH@mode=%dx%d for mode 0x%04x.\n", __func__, res.width, res.height, fse->code);
-				return 0;
-			}
-		}
-	}
+	if (fse->index == 0) {
+		fse->min_width  = 64; 
+		fse->min_height	= 64;
+		fse->max_width  = 1920;
+		fse->min_height = 1080;
+		dev_dbg_ratelimited(sub_dev->dev, "%s: offer size variable\n", __func__);
+		//dev_dbg(sub_dev->dev, "%s: offer size variable\n", __func__);
+		return 0;
+	} 
+
 	return -EINVAL;
 }
 
+#if 0 //don't use
 static int ops_enum_frame_interval(struct v4l2_subdev *sub_dev, struct v4l2_subdev_state *sd_state, struct v4l2_subdev_frame_interval_enum *fie)
 {
-	int i, count=0;
-
 	if (fie->pad >= NUM_PADS)
 		return -EINVAL;
 
 	if( gs_ar0234_code_supported(fie->code) == 0)
 		return -EINVAL;
 
-	if (fie->width == 0 || fie->height == 0 || fie->code == 0) {
-		dev_err_ratelimited(sub_dev->dev, "%s Please assign pix-fmt & resolution before enum framerates.\n", __func__);
-		return -EINVAL;
-	}
-
 	fie->interval.numerator = 1;
-
-	// find the n-th entry that matches the given resolution.
-	for(i=0; i < ARRAY_SIZE(sensor_res_list); i++) {
-		if(fie->width == sensor_res_list[i].width && fie->height == sensor_res_list[i].height) {
-			if (fie->index == count++) {
-				fie->interval.denominator = sensor_res_list[i].framerate;
-				dev_dbg_ratelimited(sub_dev->dev, "%s: offer framerate %dfps for WxH@mode=%dx%d@0x%04x.\n", __func__, fie->interval.denominator, fie->width, fie->height, fie->code);
-				return 0;
-			}
-		}
+	if (fie->index <= 61) {
+		fie->interval.denominator = fie->index;
+		dev_dbg_ratelimited(sub_dev->dev, "%s: %d %d \n", __func__, fie->index, fie->interval.denominator);
+		//dev_dbg(sub_dev->dev, "%s: %d %d \n", __func__, fie->index, fie->interval.denominator);
+		return 0;
 	}
 	return -EINVAL;
 }
+#endif
+
 
 static int ops_get_frame_interval(struct v4l2_subdev *sub_dev, struct v4l2_subdev_frame_interval *fi)
 {
 	struct gs_ar0234_dev *sensor = to_gs_ar0234_dev(sub_dev);
 
-	dev_dbg(sub_dev->dev, "%s: \n", __func__);
+	dev_dbg(sub_dev->dev, "%s %d: \n", __func__, sensor->framerate);
 
 	if (fi->pad >= NUM_PADS)
 		return -EINVAL;
 
 	fi->interval.numerator = 1;
-	fi->interval.denominator = sensor->mode->framerate;
+	fi->interval.denominator = sensor->framerate;
 
 	return 0;
 }
 
 static int ops_set_frame_interval(struct v4l2_subdev *sub_dev, struct v4l2_subdev_frame_interval *fi)
 {
-	int i;
 	struct gs_ar0234_dev *sensor = to_gs_ar0234_dev(sub_dev);
 
 	dev_dbg(sub_dev->dev, "%s(setting interval = %d)\n", __func__, fi->interval.denominator);
-	for(i=0; i < ARRAY_SIZE(sensor_res_list); i++) {
-		if(sensor_res_list[i].framerate == fi->interval.denominator) {
-			sensor->framerate = fi->interval.denominator;
-			return 0;
-		}
-	}
 
+	if(fi->interval.denominator <= 121) {
+		sensor->framerate = fi->interval.denominator;
+		return 0;
+	}
 	dev_err(sensor->dev, "unsupported framerate: %d\n", fi->interval.denominator);
 	return -EINVAL;
 }
@@ -1449,7 +1345,8 @@ static int ops_set_frame_interval(struct v4l2_subdev *sub_dev, struct v4l2_subde
 static int gs_ar0234_enum_mbus_code(struct v4l2_subdev *sub_dev, struct v4l2_subdev_state *sd_state, struct v4l2_subdev_mbus_code_enum *code)
 {
 	int ret = 0;
-	dev_dbg_ratelimited(sub_dev->dev, "%s: code->code = 0x%08x\n", __func__, code->code);
+	//dev_dbg_ratelimited(sub_dev->dev, "%s: code->code = 0x%08x\n", __func__, code->code);
+	dev_dbg(sub_dev->dev, "%s: code->code = 0x%08x\n", __func__, code->code);
 
 	if ((code->pad >= NUM_PADS))
 		return -EINVAL;
@@ -1517,9 +1414,14 @@ static int gs_ar0234_s_stream(struct v4l2_subdev *sd, int enable)
 		// turn off mipi?
 		gs_ar0234_write_reg8(sensor, 0xE1, 0x02); // format change state
 		// set rres, fixed formats reg 0x10,
+#if 0		
 		gs_ar0234_write_reg8(sensor, 0x10, sensor->mode->frame_format_code);
+#else
+		gs_ar0234_write_reg16(sensor, 0x12, sensor->fmt.width);
+		gs_ar0234_write_reg16(sensor, 0x14, sensor->fmt.height);
+#endif
 		// set fr reg- 0x16 (16b = 8b,8b [fraction)]) = 60,50,30,25 or any int
-		gs_ar0234_write_reg16(sensor, 0x16, ((u16)(sensor->mode->framerate) << 8));
+		gs_ar0234_write_reg16(sensor, 0x16, ((u16)(sensor->framerate) << 8));
 		//sensor->fmt.
 		//  set format type
 		//turn on mipi
@@ -1527,7 +1429,7 @@ static int gs_ar0234_s_stream(struct v4l2_subdev *sd, int enable)
 
 		mutex_unlock(&sensor->lock);
 
-		pr_debug("%s: Starting stream at WxH@fps=%dx%d@%d\n", __func__, sensor->mode->width, sensor->mode->height, sensor->mode->framerate);
+		pr_debug("%s: Starting stream at WxH@fps=%dx%d@%d\n", __func__, sensor->fmt.width, sensor->fmt.height, sensor->framerate);
 	}
 	else
 		pr_debug("%s: Stopping stream \n", __func__);
@@ -1563,7 +1465,7 @@ static const struct v4l2_subdev_pad_ops gs_ar0234_pad_ops = {
 	.get_fmt = ops_get_fmt,
 	.set_fmt = gs_ar0234_set_fmt,
 	.enum_frame_size = ops_enum_frame_size,
-	.enum_frame_interval = ops_enum_frame_interval,
+	//.enum_frame_interval = ops_enum_frame_interval,
 };
 
 static const struct v4l2_subdev_ops gs_ar0234_subdev_ops = {
@@ -1772,11 +1674,10 @@ static int gs_ar0234_probe(struct i2c_client *client, const struct i2c_device_id
 	fmt->ycbcr_enc = V4L2_MAP_YCBCR_ENC_DEFAULT(fmt->colorspace);
 	fmt->quantization = V4L2_QUANTIZATION_FULL_RANGE;
 	fmt->xfer_func = V4L2_MAP_XFER_FUNC_DEFAULT(fmt->colorspace);
-	fmt->width = 1280;
-	fmt->height = 720;
+	fmt->width = 1920;
+	fmt->height = 1080;
 	fmt->field = V4L2_FIELD_NONE;
 	sensor->framerate = 30;
-	sensor->mode = &sensor_res_list[0];
 	sensor->mbus_num = GS_CF_YUV422;
 	sensor->update_type = NONE;
 	sensor->dev = dev;
