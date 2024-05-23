@@ -27,7 +27,6 @@
 #define BOOTID 0x5AA5
 #define INITIAL_CRC 0xFFFF
 
-
 enum commands {
 	GS_COMD_8BIT_REG_W =            0x30,
 	GS_COMD_8BIT_REG_R =            0x31,
@@ -56,6 +55,11 @@ enum regs {
 	GS_REG_SHARPNESS      			= 0x0A,
 	GS_REG_NOISE_RED      			= 0x0C,
 	GS_REG_GAMMA		  			= 0x0E,
+	GS_REG_FORMAT					= 0x10,
+	GS_REG_FORMAT_TYPE				= 0x11,
+	GS_REG_FORMAT_X   				= 0x12,
+	GS_REG_FORMAT_Y					= 0x14,
+	GS_REG_FRAMERATE				= 0x16,
 	GS_REG_ZOOM						= 0x18,
 	GS_REG_ZOOM_SPEED				= 0x1C,
 	GS_REG_PAN						= 0x1D,
@@ -94,6 +98,7 @@ enum regs {
 	GS_REG_AWB_MAN_X				= 0x8A,
 	GS_REG_AWB_MAN_Y				= 0x8C,
 	GS_REG_TESTPATTERN 				= 0xE0,
+	GS_REG_SET_STATE				= 0xE1,
 	GS_REG_POWER                    = 0xE7,
 	GS_REG_SAVE_RESTART				= 0xF0,
 	GS_REG_CAMERA_TYPE              = 0xF1,
@@ -139,6 +144,13 @@ enum cameratype {
 	UNKNOWN = 0,
 	COLOR,
 	MONOCHROME
+};
+
+enum setstate {
+	FORMAT_CHANGE = 2,
+	FORMAT_DONE = 3,
+	POWER_DOWN = 4,
+	STARTUP = 5
 };
 
 /**

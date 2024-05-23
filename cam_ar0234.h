@@ -159,6 +159,7 @@ struct gs_ar0234_dev {
 	u16 nvm_version;
 	u16 isp_version;
 	u8  sensor_type;
+	u8  format_type;
 	int csi_id;
 };
 

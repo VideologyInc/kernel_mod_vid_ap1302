@@ -515,22 +515,28 @@ static int gs_ar0234_s_ctrl(struct v4l2_ctrl *ctrl)
 		break;
 	case V4L2_CID_STORE_REGISTERS:
 		ret = gs_ar0234_write_reg8(sensor, GS_REG_SAVE_RESTART, 0x01);
+		if(ret) break;
+		ret = gs_check_wait(sensor, 50, 1000); // wait
 		dev_dbg_ratelimited(sd->dev, "%s: set store registers\n", __func__);
 		break;
 	case V4L2_CID_RESTORE_REGISTERS:
 		ret = gs_ar0234_write_reg8(sensor, GS_REG_SAVE_RESTART, 0x05);
 		if(ret) break;
-		msleep(5); //wait 5 ms for recovery of factory registers
+		//msleep(2000); //wait 2000 ms for recovery of factory registers
+		ret = gs_check_wait(sensor, 50, 1000); // wait
+		if(ret) break;
 		dev_dbg_ratelimited(sd->dev, "%s: set restore registers\n", __func__);
 		ret = gs_ar0234_i_cntrl(sensor);
 		break;
 	case V4L2_CID_RESTORE_FACTORY:
 		ret = gs_ar0234_write_reg8(sensor, GS_REG_SAVE_RESTART, 0x07);
 		if(ret) break;
-		msleep(10); //wait 5 ms for recovery of factory registers
+		ret = gs_check_wait(sensor, 50, 1000); // wait
+		if(ret) break;
 		ret = gs_ar0234_write_reg8(sensor, GS_REG_SAVE_RESTART, 0x08);
 		if(ret) break;
-		msleep(10); //wait 5 ms for recovery of factory registers
+		ret = gs_check_wait(sensor, 50, 1000); // wait
+		if(ret) break;
 		dev_dbg_ratelimited(sd->dev, "%s: set restore factory\n", __func__);
 		ret = gs_ar0234_i_cntrl(sensor);
 		break;
@@ -1345,6 +1351,8 @@ static int ops_set_frame_interval(struct v4l2_subdev *sub_dev, struct v4l2_subde
 static int gs_ar0234_enum_mbus_code(struct v4l2_subdev *sub_dev, struct v4l2_subdev_state *sd_state, struct v4l2_subdev_mbus_code_enum *code)
 {
 	int ret = 0;
+	struct gs_ar0234_dev *sensor = to_gs_ar0234_dev(sub_dev);
+
 	//dev_dbg_ratelimited(sub_dev->dev, "%s: code->code = 0x%08x\n", __func__, code->code);
 	dev_dbg(sub_dev->dev, "%s: code->code = 0x%08x\n", __func__, code->code);
 
@@ -1392,6 +1400,7 @@ static int gs_ar0234_enum_mbus_code(struct v4l2_subdev *sub_dev, struct v4l2_sub
 			ret = -EINVAL;
 			break;
 	}
+	sensor->format_type = code->pad;
 	return ret;
 }
 
@@ -1400,7 +1409,7 @@ static int gs_ar0234_s_stream(struct v4l2_subdev *sd, int enable)
 	struct gs_ar0234_dev *sensor = to_gs_ar0234_dev(sd);
 	int ret = 0;
 
-	pr_debug("%s: start %d\n", __func__, sensor->csi_id);
+	pr_debug("%s: start: csi%d, format: %d\n", __func__, sensor->csi_id, sensor->format_type);
 
 	if (sensor->ep.bus_type != V4L2_MBUS_CSI2_DPHY){
 		dev_err(sensor->dev, "endpoint bus_type not supported: %d\n", sensor->ep.bus_type);
@@ -1411,21 +1420,28 @@ static int gs_ar0234_s_stream(struct v4l2_subdev *sd, int enable)
 	{
 		mutex_lock(&sensor->lock);
 
-		// turn off mipi?
-		gs_ar0234_write_reg8(sensor, 0xE1, 0x02); // format change state
-		// set rres, fixed formats reg 0x10,
+		// turn off mipi lanes
+		gs_ar0234_write_reg8(sensor, GS_REG_SET_STATE, FORMAT_CHANGE); // format change state
+
+		// set format type
+		gs_ar0234_write_reg8(sensor, GS_REG_FORMAT_TYPE, sensor->format_type); // format type
+		gs_check_wait(sensor, 10, 150); // wait > 100ms, using 150ms
+	
 #if 0		
+		// set res, fixed formats reg 0x10,
 		gs_ar0234_write_reg8(sensor, 0x10, sensor->mode->frame_format_code);
+		gs_check_wait(sensor, 10, 150); // wait > 100ms, using 150ms
 #else
-		gs_ar0234_write_reg16(sensor, 0x12, sensor->fmt.width);
-		gs_ar0234_write_reg16(sensor, 0x14, sensor->fmt.height);
+		gs_ar0234_write_reg16(sensor, GS_REG_FORMAT_X, sensor->fmt.width);
+		gs_check_wait(sensor, 10, 150); // wait > 100ms, using 150ms
+		gs_ar0234_write_reg16(sensor, GS_REG_FORMAT_Y, sensor->fmt.height);
+		gs_check_wait(sensor, 10, 150); // wait > 100ms, using 150ms
 #endif
 		// set fr reg- 0x16 (16b = 8b,8b [fraction)]) = 60,50,30,25 or any int
-		gs_ar0234_write_reg16(sensor, 0x16, ((u16)(sensor->framerate) << 8));
-		//sensor->fmt.
-		//  set format type
+		gs_ar0234_write_reg16(sensor, GS_REG_FRAMERATE, ((u16)(sensor->framerate) << 8));
+
 		//turn on mipi
-		gs_ar0234_write_reg8(sensor, 0xE1, 0x03); // format change state
+		gs_ar0234_write_reg8(sensor, GS_REG_SET_STATE, FORMAT_DONE); // format change state Done
 
 		mutex_unlock(&sensor->lock);
 
