@@ -45,7 +45,7 @@
 #define ISP_MONO_FIRMWARE_NAME "SFT-24148_full_mono_443.img"			// monochrome
 
 
-//get module parameter from /etc/modprobe.d/vid_isp_ar0234.conf file 
+//get module parameter from /etc/modprobe.d/vid_isp_ar0234.conf file
 static int nvm_firmware_versions[MAX_CAMERA_DEVICES] = { [0 ...(MAX_CAMERA_DEVICES - 1)] = NVM_FIRMWARE_VERSION };
 module_param_array(nvm_firmware_versions, int, NULL, 0444);
 MODULE_PARM_DESC(devices, "nvm version numbers");
@@ -213,14 +213,14 @@ static int gs_ar0234_s_ctrl(struct v4l2_ctrl *ctrl)
 		break;
 	case V4L2_CID_AUTO_N_PRESET_WHITE_BALANCE:
 		if(ctrl->val == V4L2_WHITE_BALANCE_MANUAL)
-		{ 
+		{
 			if (sensor->ctrls.auto_wb->cur.val == 0) // if WB is disabled
 			{
 				ret = gs_ar0234_write_reg8(sensor, GS_REG_WHITEBALANCE, 0x00); // Control AWB manualy using X, Y parameters
 				dev_dbg_ratelimited(sd->dev, "%s: set white balance temperature to Manual\n", __func__);
 			}
 		}
-		else 
+		else
 		{
 			if (sensor->ctrls.auto_wb->cur.val == 0) // if WB is disabled
 			{
@@ -249,11 +249,11 @@ static int gs_ar0234_s_ctrl(struct v4l2_ctrl *ctrl)
 	case V4L2_CID_AWB_MAN_X:
 		ret = gs_ar0234_write_reg16(sensor, GS_REG_AWB_MAN_X, ctrl->val);
 		dev_dbg_ratelimited(sd->dev, "%s: set white balance manual X to %d \n", __func__, ctrl->val);
-		break;	
+		break;
 	case V4L2_CID_AWB_MAN_Y:
 		ret = gs_ar0234_write_reg16(sensor, GS_REG_AWB_MAN_Y, ctrl->val);
 		dev_dbg_ratelimited(sd->dev, "%s: set white balance manual Y to %d \n", __func__, ctrl->val);
-		break;	
+		break;
 	case V4L2_CID_GAMMA:
 		ret = gs_ar0234_write_reg16(sensor, GS_REG_GAMMA, ctrl->val);
 		dev_dbg_ratelimited(sd->dev, "%s: set gamma to %d\n", __func__, ctrl->val);
@@ -1284,14 +1284,14 @@ static int ops_enum_frame_size(struct v4l2_subdev *sub_dev, struct v4l2_subdev_s
 		return -EINVAL;
 
 	if (fse->index == 0) {
-		fse->min_width  = 64; 
+		fse->min_width  = 64;
 		fse->min_height	= 64;
 		fse->max_width  = 1920;
-		fse->min_height = 1080;
+		fse->max_height = 1200;
 		dev_dbg_ratelimited(sub_dev->dev, "%s: offer size variable\n", __func__);
 		//dev_dbg(sub_dev->dev, "%s: offer size variable\n", __func__);
 		return 0;
-	} 
+	}
 
 	return -EINVAL;
 }
@@ -1415,7 +1415,7 @@ static int gs_ar0234_s_stream(struct v4l2_subdev *sd, int enable)
 		dev_err(sensor->dev, "endpoint bus_type not supported: %d\n", sensor->ep.bus_type);
 		return -EINVAL;
 	}
-	
+
 	if (enable)
 	{
 		mutex_lock(&sensor->lock);
@@ -1426,8 +1426,8 @@ static int gs_ar0234_s_stream(struct v4l2_subdev *sd, int enable)
 		// set format type
 		gs_ar0234_write_reg8(sensor, GS_REG_FORMAT_TYPE, sensor->format_type); // format type
 		gs_check_wait(sensor, 10, 150); // wait > 100ms, using 150ms
-	
-#if 0		
+
+#if 0
 		// set res, fixed formats reg 0x10,
 		gs_ar0234_write_reg8(sensor, 0x10, sensor->mode->frame_format_code);
 		gs_check_wait(sensor, 10, 150); // wait > 100ms, using 150ms
@@ -1454,7 +1454,7 @@ static int gs_ar0234_s_stream(struct v4l2_subdev *sd, int enable)
 }
 
 
-int gs_ar0234_init_cfg(struct v4l2_subdev *sd, struct v4l2_subdev_state *state) 
+int gs_ar0234_init_cfg(struct v4l2_subdev *sd, struct v4l2_subdev_state *state)
 {
 	struct gs_ar0234_dev *sensor = to_gs_ar0234_dev(sd);
 	dev_info(sensor->dev, "%s \n",__func__);
@@ -1511,9 +1511,9 @@ static void gs_ar0234_remove(struct i2c_client *client);
 
 /**
  * @brief update firmware function
- * 
- * @param fw 
- * @param context 
+ *
+ * @param fw
+ * @param context
  */
 static void gs_ar0234_fw_update(const struct firmware *fw, void *context)
 {
@@ -1540,7 +1540,7 @@ static void gs_ar0234_fw_update(const struct firmware *fw, void *context)
 			break;
 		default:
 			break;
-	}	
+	}
 	if(ret < 0)
 		goto exit;
 
@@ -1560,9 +1560,9 @@ exit:
 
 /**
  * @brief fw update handler
- * 
- * @param fw 
- * @param context 
+ *
+ * @param fw
+ * @param context
  */
 static void gs_ar0234_fw_handler(const struct firmware *fw, void *context)
 {
@@ -1578,37 +1578,37 @@ static void gs_ar0234_fw_handler(const struct firmware *fw, void *context)
 	{
 		dev_info(sensor->dev, "Boot: Loading MCU Firmware: %s (%04x)\n", MCU_FIRMWARE_NAME, MCU_FIRMWARE_VERSION);
 		gs_ar0234_fw_update(fw, sensor);
-		release_firmware(fw); 
+		release_firmware(fw);
 		sensor->mcu_version = MCU_FIRMWARE_VERSION;
 		sensor->nvm_version = NVM_FIRMWARE_VERSION;
 	}
-	else 
+	else
 	{
-		if(sensor->mcu_version != MCU_FIRMWARE_VERSION) 
+		if(sensor->mcu_version != MCU_FIRMWARE_VERSION)
 		{
 			sensor->update_type = MCU; // update MCU firmware only
 			dev_info(sensor->dev, "Loading MCU Firmware: %s (%04x)\n", MCU_FIRMWARE_NAME, MCU_FIRMWARE_VERSION);
 			gs_ar0234_fw_update(fw, sensor);
-			release_firmware(fw); 
+			release_firmware(fw);
 			sensor->mcu_version = MCU_FIRMWARE_VERSION;
 		}
-		else 
-			release_firmware(fw); 
+		else
+			release_firmware(fw);
 
 		// update NVM if version does not match and version number in the conf five is not zero
-		if ( (sensor->nvm_version != nvm_firmware_versions[sensor->csi_id]) && (nvm_firmware_versions[sensor->csi_id] != 0)) 
+		if ( (sensor->nvm_version != nvm_firmware_versions[sensor->csi_id]) && (nvm_firmware_versions[sensor->csi_id] != 0))
 		{
 			if(nvm_firmware_names[sensor->csi_id] != NULL) // firmware name must exist
 			{
 				sensor->update_type = NVM;
 				dev_info(sensor->dev, "Loading NVM Firmware: %s (%04x)\n", nvm_firmware_names[sensor->csi_id], nvm_firmware_versions[sensor->csi_id]);
-				if(request_firmware_direct(&fw_local, nvm_firmware_names[sensor->csi_id], sensor->dev) == 0) 
+				if(request_firmware_direct(&fw_local, nvm_firmware_names[sensor->csi_id], sensor->dev) == 0)
 				{
 					gs_ar0234_fw_update(fw_local,sensor);
-					release_firmware(fw_local); 
+					release_firmware(fw_local);
 					sensor->nvm_version = nvm_firmware_versions[sensor->csi_id];
 				}
-				else	
+				else
 					dev_err(sensor->dev, "request_firmware_direct failed\n");
 			}
 			else
@@ -1621,13 +1621,13 @@ static void gs_ar0234_fw_handler(const struct firmware *fw, void *context)
 		dev_err(sensor->dev, "gs_ar0234_version failed\n");
 
 	pr_debug("-->%s: ISP version: %04x\n",__func__, isp_code);
-	if(isp_code != ISP_FIRMWARE_VERSION) 
+	if(isp_code != ISP_FIRMWARE_VERSION)
 	{
-		sensor->update_type = ISP;	
+		sensor->update_type = ISP;
 		ret = gs_get_camera_type(sensor, &sensor->sensor_type);
 		if(ret)
 			dev_err(sensor->dev, "gs_get_camera_type failed\n");
-		pr_debug("---%s: cameratype: %d\n",__func__, sensor->sensor_type);	
+		pr_debug("---%s: cameratype: %d\n",__func__, sensor->sensor_type);
 
 		if (sensor->sensor_type == COLOR) isp_name=ISP_COLOR_FIRMWARE_NAME;
 		else if (sensor->sensor_type == MONOCHROME) isp_name=ISP_MONO_FIRMWARE_NAME;
@@ -1637,13 +1637,13 @@ static void gs_ar0234_fw_handler(const struct firmware *fw, void *context)
 			dev_info(sensor->dev, "Loading ISP Firmware: %s (%04x)\n", isp_name, ISP_FIRMWARE_VERSION);
 			if(request_firmware_direct(&fw_local, ISP_COLOR_FIRMWARE_NAME, sensor->dev) == 0) {
 				gs_ar0234_fw_update(fw_local, sensor);
-				release_firmware(fw_local); 
+				release_firmware(fw_local);
 				sensor->isp_version = ISP_FIRMWARE_VERSION;
 			}
-			else	
+			else
 				dev_err(sensor->dev, "request_firmware_direct failed\n");
 		}
-		else 
+		else
 			dev_info(sensor->dev, "Loading ISP Firmware skipped\n");
 	}
 
@@ -1656,7 +1656,7 @@ static void gs_ar0234_fw_handler(const struct firmware *fw, void *context)
 	ret = gs_ar0234_s_power(&sensor->sd, GS_POWER_DOWN);
 	if (ret)
 		sensor->firmware_loaded = -1;
-	pr_debug("---%s: Power down\n",__func__);	
+	pr_debug("---%s: Power down\n",__func__);
 	mutex_unlock(&sensor->probe_lock);
 }
 
@@ -1685,7 +1685,7 @@ static int gs_ar0234_probe(struct i2c_client *client, const struct i2c_device_id
 
 	// default init sequence initialize sensor to 1080p30 YUV422 UYVY
 	fmt = &sensor->fmt;
-	fmt->code = MEDIA_BUS_FMT_YUYV8_1X16; // 
+	fmt->code = MEDIA_BUS_FMT_YUYV8_1X16; //
 	fmt->colorspace = V4L2_COLORSPACE_SRGB;
 	fmt->ycbcr_enc = V4L2_MAP_YCBCR_ENC_DEFAULT(fmt->colorspace);
 	fmt->quantization = V4L2_QUANTIZATION_FULL_RANGE;
@@ -1740,7 +1740,7 @@ static int gs_ar0234_probe(struct i2c_client *client, const struct i2c_device_id
 	// Power Up
 	ret = gs_ar0234_s_power(&sensor->sd, GS_POWER_UP);
 	if (ret) return -EIO;
-	pr_debug("---%s: Power up\n",__func__);	
+	pr_debug("---%s: Power up\n",__func__);
 
 #ifdef DEBUG
 	gs_print_params();
@@ -1751,7 +1751,7 @@ static int gs_ar0234_probe(struct i2c_client *client, const struct i2c_device_id
 		dev_err(dev, "csi id missing or invalid\n");
 		return ret;
 	}
-	pr_debug("---%s: CSI ID = %d\n",__func__,sensor->csi_id);	
+	pr_debug("---%s: CSI ID = %d\n",__func__,sensor->csi_id);
 
 	mutex_lock(&sensor->probe_lock);
 
@@ -1832,7 +1832,7 @@ static int gs_ar0234_probe(struct i2c_client *client, const struct i2c_device_id
 		ret = gs_ar0234_s_power(&sensor->sd, GS_POWER_DOWN);
 		if (ret)
 			goto free_ctrls;
-		pr_debug("---%s: Power down\n",__func__);	
+		pr_debug("---%s: Power down\n",__func__);
 	} // if firmware update was performed untill here
 
 	pr_debug("<--%s: gs_ar0234 Probe end successful, return\n",__func__);
