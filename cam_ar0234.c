@@ -29,14 +29,14 @@
 #include "gs_ap1302.h"
 #include "gs_image_update.h"
 
-#define MCU_FIRMWARE_VERSION 0x001D // version = 0.29
+#define MCU_FIRMWARE_VERSION 0x001E // version = 0.30
 #define NVM_FIRMWARE_VERSION 0x0001 // version = 0.1 (un-even version for GPIO 8)
 //#define NVM_FIRMWARE_VERSION 0x0002 // version = 0.2 (even version for GPIO 7)
 #define ISP_FIRMWARE_VERSION 443
 
 // MCU firmware contains both mcu and nvm in a single image therefore it has two version numbers.
-#define MCU_FIRMWARE_NAME "SFT-23361_mcu_0.29_0.1.img"   				// trigger on gpio 8
-//#define MCU_FIRMWARE_NAME "SFT-23361_mcu_0.29_0.2.img" 				// trigger on gpio 7
+#define MCU_FIRMWARE_NAME "SFT-23361_mcu_0.30_0.1.img"   				// trigger on gpio 8
+//#define MCU_FIRMWARE_NAME "SFT-23361_mcu_0.30_0.2.img" 				// trigger on gpio 7
 
 #define NVM_FIRMWARE_NAME "SFT-23363_nvm_0.1.img" 						// trigger on gpio 8
 //#define NVM_FIRMWARE_NAME "SFT-23363_nvm_0.2.img"						// trigger on gpio 7

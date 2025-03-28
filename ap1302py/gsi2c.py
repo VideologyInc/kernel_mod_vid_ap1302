@@ -168,7 +168,7 @@ def read_nvm(page, address, size):
 # NVM_FACTORY_CAL = page 3 (need password)
 def write_nvm(page, address, buf):
     if page >= 4: return # never use page = 4 here
-    dprint("\write nvm: ")
+    dprint("\twrite nvm: ")
     dprint(buf)
     dprint("\n")
     msgs = [I2C.Message([0x50, page, address] + buf, read=False)]
