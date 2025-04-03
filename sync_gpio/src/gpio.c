@@ -26,8 +26,10 @@ void signal_handler(int signum) {
 }
 
 int main(int argc, char *argv[]) {
-    const char* gpiolineName = "CSI0-TRIGGER";
-    struct gpiod_line* gpioline = NULL;
+    const char* gpiolineName0 = "CSI0-TRIGGER";
+    const char* gpiolineName1 = "CSI1-TRIGGER";
+    struct gpiod_line* gpioline0 = NULL;
+    struct gpiod_line* gpioline1 = NULL;
     int timer_fd = timerfd_create(PTP_CLOCK_ID, 0);
     if (timer_fd == -1) {
         perror("timerfd_create");
@@ -63,14 +65,23 @@ int main(int argc, char *argv[]) {
     // Set up signal handler
     signal(SIGINT, signal_handler);
 
-    gpioline = gpiod_line_find(gpiolineName);
+    gpioline0 = gpiod_line_find(gpiolineName0);
+    gpioline1 = gpiod_line_find(gpiolineName1);
 
-    if (gpioline == NULL) {
+    if (gpioline0 == NULL) {
+        printf("Invalid line name.\n");
+        return 1;
+    }
+    if (gpioline1 == NULL) {
         printf("Invalid line name.\n");
         return 1;
     }
 
-    if (gpiod_line_request_output(gpioline, "GPIO application", 0) < 0) {
+    if (gpiod_line_request_output(gpioline0, "GPIO application", 0) < 0) {
+        printf("Failed to request GPIO line.\n");
+        return 1;
+    }
+    if (gpiod_line_request_output(gpioline1, "GPIO application", 0) < 0) {
         printf("Failed to request GPIO line.\n");
         return 1;
     }
@@ -78,9 +89,11 @@ int main(int argc, char *argv[]) {
     printf("Waiting for periodic events...\n");
     while (running) {
         uint64_t expirations;
-        gpiod_line_set_value(gpioline, 1);
+        gpiod_line_set_value(gpioline0, 1);
+        gpiod_line_set_value(gpioline1, 1);
         usleep(5000); // 1 ms
-        gpiod_line_set_value(gpioline, 0);
+        gpiod_line_set_value(gpioline0, 0);
+        gpiod_line_set_value(gpioline1, 0);
         ssize_t s = read(timer_fd, &expirations, sizeof(expirations));
         if (s != sizeof(expirations)) {
             perror("read");
@@ -91,8 +104,10 @@ int main(int argc, char *argv[]) {
     close(timer_fd);
 
     // Cleanup
-    gpiod_line_set_value(gpioline, 0);  // Set to low before releasing
-    gpiod_line_release(gpioline);
+    gpiod_line_set_value(gpioline0, 0);  // Set to low before releasing
+    gpiod_line_set_value(gpioline1, 0);  // Set to low before releasing
+    gpiod_line_release(gpioline0);
+    gpiod_line_release(gpioline1);
     printf("GPIO cleanup completed.\n");
 
     return 0;
