@@ -1,24 +1,23 @@
 # tool macros
-CC := gcc
-CCFLAGS := -Iincludes/
-DBGFLAGS := -g
-LDFLAGS := -lgpiod
-CCOBJFLAGS := $(CCFLAGS) -c
-ARCH :=
+CC ?= gcc
+CCFLAGS ?= -Iincludes/
+DBGFLAGS ?= -g
+LDLIBS = -lgpiod
+CCOBJFLAGS = $(CCFLAGS) -c
 
 # path macros
-BIN_PATH := build-$(ARCH)/bin
-OBJ_PATH := build-$(ARCH)/obj
+BIN_PATH := build/bin
+OBJ_PATH := build/obj
 SRC_PATH := src
-DBG_PATH := build-$(ARCH)/debug
+DBG_PATH := build/debug
 
 # compile macros
-TARGET_NAME := gpioC
+TARGET_NAME := gpio_sync_trigger
 TARGET := $(BIN_PATH)/$(TARGET_NAME)
 TARGET_DEBUG := $(DBG_PATH)/$(TARGET_NAME)
 
 # src files & obj files
-SRC := $(foreach x, $(SRC_PATH), $(wildcard $(addprefix $(x)/*,.c*)))
+SRC := $(wildcard $(SRC_PATH)/*.c*)
 OBJ := $(addprefix $(OBJ_PATH)/, $(addsuffix .o, $(notdir $(basename $(SRC)))))
 OBJ_DEBUG := $(addprefix $(DBG_PATH)/, $(addsuffix .o, $(notdir $(basename $(SRC)))))
 
@@ -31,11 +30,11 @@ CLEAN_LIST := $(TARGET) \
 				$(DISTCLEAN_LIST)
 
 # default rule
-default: makedir all
+default: all
 
 # non-phony targets
 $(TARGET): $(OBJ)
-	$(CC) $(CCFLAGS) -o $@ $(OBJ) $(LDFLAGS)
+	$(CC) $(CCFLAGS) -o $@ $(OBJ) $(LDFLAGS) $(LDLIBS)
 
 $(OBJ_PATH)/%.o: $(SRC_PATH)/%.c*
 	$(CC) $(CCOBJFLAGS) -o $@ $<
@@ -44,18 +43,22 @@ $(DBG_PATH)/%.o: $(SRC_PATH)/%.c*
 	$(CC) $(CCOBJFLAGS) $(DBGFLAGS) -o $@ $<
 
 $(TARGET_DEBUG): $(OBJ_DEBUG)
-	$(CC) $(CCFLAGS) $(DBGFLAGS) $(OBJ_DEBUG) -o $@ $(LDFLAGS)
+	$(CC) $(CCFLAGS) $(DBGFLAGS) -o $@ $(OBJ_DEBUG) $(LDFLAGS) $(LDLIBS)
 
 # phony rules
-.PHONY: makedir
+.PHONY: default makedir makedir_debug install
+
 makedir:
-	@mkdir -p $(BIN_PATH) $(OBJ_PATH) $(DBG_PATH)
+	@mkdir -p $(BIN_PATH) $(OBJ_PATH)
+
+makedir_debug:
+	@mkdir -p $(DBG_PATH)
 
 .PHONY: all
-all: $(TARGET)
+all: makedir $(TARGET)
 
 .PHONY: debug
-debug: $(TARGET_DEBUG)
+debug: makedir makedir_debug $(TARGET_DEBUG)
 
 .PHONY: clean
 clean:
@@ -64,5 +67,11 @@ clean:
 
 .PHONY: distclean
 distclean:
-	@echo CLEAN $(CLEAN_LIST)
+	@echo CLEAN $(DISTCLEAN_LIST)
 	@rm -f $(DISTCLEAN_LIST)
+
+# Install target for Yocto
+.PHONY: install
+install:
+	install -d $(DESTDIR)$(bindir)
+	install -m 0755 $(TARGET) $(DESTDIR)$(bindir)/
