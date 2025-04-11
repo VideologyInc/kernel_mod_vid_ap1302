@@ -21,6 +21,7 @@ setup(
     },
     install_requires=[
         'python_periphery>=2.1.0',
+        'pytimerfd>=1.2',
     ],
     classifiers=[
         'Development Status :: 4 - Beta',
