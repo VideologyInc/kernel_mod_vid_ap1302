@@ -1677,6 +1677,8 @@ static int gs_ar0234_probe(struct i2c_client *client, const struct i2c_device_id
 	u16 mcu_code, nvm_code, isp_code;
 	bool update = false;
 
+	pr_debug("***** AB1610 gs_ar0234 Probe start *****\n");
+
 	pr_debug("-->%s: gs_ar0234 Probe start\n",__func__);
 
 	sensor = devm_kzalloc(dev, sizeof(*sensor), GFP_KERNEL);
