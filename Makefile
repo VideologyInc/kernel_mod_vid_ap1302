@@ -2,7 +2,7 @@
 vid_isp_ar0234-objs = cam_ar0234.o gs_ap1302.o gs_image_update.o
 obj-m += vid_isp_ar0234.o
 
-# EXTRA_CFLAGS += -DDEBUG
+EXTRA_CFLAGS += -DDEBUG
 
 KERNEL_SRC ?= /usr/src/kernel
 INSTALL_FW_PATH ?= $(DESTDIR)/lib/firmware
