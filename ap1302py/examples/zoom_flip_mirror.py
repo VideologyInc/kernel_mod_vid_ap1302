@@ -37,25 +37,23 @@ video_format = {
 def read_zoom()->float:
     """
     16 bits = s7.8: 1-bit sign, 7-bit integer, 8-bit fraction
+    Treat value as a standard int16 type.
     """
 
     val = gsi2c.read16(0x18)
-    sign = val >> 15
-    val = val & 0x7F
     v = val / 256.0
-    return -v if sign else v
+    return v if v<=128 else 256-v
 
 
 def get_zoom():
     """
     16 bits = s7.8: 1-bit sign, 7-bit integer, 8-bit fraction
+    Treat value as a standard int16 type.
     """
 
     val = gsi2c.read16(0x1A)
-    sign = val >> 15
-    val = val & 0x7F
     v = val / 256.0
-    return -v if sign else v
+    return v
 
 
 def set_zoom(scale: float):
@@ -65,10 +63,8 @@ def set_zoom(scale: float):
     """
 
     scale = min(max(scale, -40), 40)
-    sign = scale < 0
-    vali = int(abs(scale)*256)
-    valw = vali + (sign <<15)
-    gsi2c.write16(0x18, valw)
+    vali = int(scale*256)
+    gsi2c.write16(0x18, vali)
 
 def reset_zoom():
     gsi2c.write16(0x18, 0x0100)
@@ -159,8 +155,7 @@ def reset_mirror_flip():
 # Test zoom.
 def test_zoom():
 
-    set_zoom(2.0)
-
+    reset_zoom()
     print("Zoom Read = ", read_zoom())
     print("Get Zoom = ", get_zoom())
     print("Zoom Speed = ", get_zoom_speed())
@@ -168,11 +163,13 @@ def test_zoom():
     print("Pan Horizontal = ", pan_horizontal())
     print("Pan Vertical = ", pan_vertical())
 
-    time.sleep(2)
-    set_zoom(0.75)
-
-    print("Zoom Read = ", read_zoom())
-    print("Get Zoom = ", get_zoom())
+    # Test some zoom scales (>0 by fov, <0 by user).
+    for s in [2.0, -1.5, -1.0, -0.5, 1.5]:
+        time.sleep(2)
+        print(f"\nSet Zoom: {s}")
+        set_zoom(s)
+        print("Zoom Read = ", read_zoom())
+        print("Get Zoom = ", get_zoom())
 
 
 # Test mirror and flip.
