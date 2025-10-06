@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-2.0-or-later
 
+import argparse
 import math
 import time
 
@@ -32,9 +33,9 @@ video_format = {
 }
 
 
-# Set / Get Zoom and Pan
+# Set / Get Zoom.
 # read zoom and get zoom use different registers: 0x18 (RW) and 0x1A (RO)
-def read_zoom()->float:
+def read_zoom() -> float:
     """
     16 bits = s7.8: 1-bit sign, 7-bit integer, 8-bit fraction
     Treat value as a standard int16 type.
@@ -42,7 +43,7 @@ def read_zoom()->float:
 
     val = gsi2c.read16(0x18)
     v = val / 256.0
-    return v if v<=128 else 256-v
+    return v if v <= 128 else v - 256
 
 
 def get_zoom():
@@ -63,16 +64,20 @@ def set_zoom(scale: float):
     """
 
     scale = min(max(scale, -40), 40)
-    vali = int(scale*256)
+    vali = int(scale * 256)
     gsi2c.write16(0x18, vali)
+
 
 def reset_zoom():
     gsi2c.write16(0x18, 0x0100)
-    
+    # Also reset zoom speed.
+    gsi2c.write8(0x1C, 0x80)
 
+
+# Set / Get zoom speed, effective when zoom-in or zoom-out.
 def get_zoom_speed():
     """
-    0x80 = Immediate
+    0x80 = Immediate    (This should be default value instead of 0 ;-)
     0x00 = stop
     1(0x01) ~ 127(0x7F) = Linear
     (neg.)1(0xFF) ~ (neg.)127(0x81) = Fractional
@@ -81,11 +86,23 @@ def get_zoom_speed():
     """
 
     val = gsi2c.read8(0x1C)
-    return val if val <= 128 else 1.0 / (256 - val)
+    return val if val <= 128 else val - 256
 
 
-def pan_horizontal():
+def set_zoom_speed(val):
     """
+    val in [-127, 128]
+    """
+
+    val = min(max(val, -127), 128)
+    gsi2c.write8(0x1C, val)
+
+
+# Set / Get Pan / Tilt in zoom-in mode.
+def get_pan():
+    """
+    Horizontal pan in zoom-in mode.
+
     0 = center
     [-64, -1] = pan left
     [1, 64] = pan right
@@ -95,8 +112,18 @@ def pan_horizontal():
     return val
 
 
-def pan_vertical():
+def set_pan(val):
     """
+    val in [-64, 64]
+    """
+    val = min(max(val, -64), 64) + 64
+    gsi2c.write8(0x1D, val)
+
+
+def get_tilt():
+    """
+    Vertical Tilt in zoom-in mode.
+
     0 = center
     [-64, -1] = pan up
     [1, 64] = pan down
@@ -104,6 +131,14 @@ def pan_vertical():
     val = gsi2c.read8(0x1E) - 0x40
 
     return val
+
+
+def set_tilt(val):
+    """
+    val in [-64, 64]
+    """
+    val = min(max(val, -64), 64) + 64
+    gsi2c.write8(0x1E, val)
 
 
 # Get / Set mirror and flip.
@@ -160,8 +195,8 @@ def test_zoom():
     print("Get Zoom = ", get_zoom())
     print("Zoom Speed = ", get_zoom_speed())
 
-    print("Pan Horizontal = ", pan_horizontal())
-    print("Pan Vertical = ", pan_vertical())
+    print("Pan Horizontal = ", get_pan())
+    print("Tilt Vertical = ", get_tilt())
 
     # Test some zoom scales (>0 by fov, <0 by user).
     for s in [2.0, -1.5, -1.0, -0.5, 1.5]:
@@ -170,6 +205,29 @@ def test_zoom():
         set_zoom(s)
         print("Zoom Read = ", read_zoom())
         print("Get Zoom = ", get_zoom())
+
+
+# Test zoom speed.
+def test_zoom_speed():
+
+    reset_zoom()
+    print("Zoom = ", get_zoom(), ", Zoom Speed = ", get_zoom_speed())
+    # Use defaukt zoom speed.
+    set_zoom(1.5)
+    time.sleep(1)
+    print("Zoom = ", get_zoom(), ", Zoom Speed = ", get_zoom_speed())
+
+    set_zoom_speed(10)
+    set_zoom_speed(-10)
+    set_zoom(2.0)
+    time.sleep(4)
+    print("Zoom = ", get_zoom(), ", Zoom Speed = ", get_zoom_speed())
+
+    set_zoom_speed(100)
+    set_zoom_speed(-20)
+    set_zoom(0.5)
+    time.sleep(4)
+    print("Zoom = ", get_zoom(), ", Zoom Speed = ", get_zoom_speed())
 
 
 # Test mirror and flip.
@@ -202,9 +260,32 @@ def test_mirror_flip():
 """
 
 if __name__ == "__main__":
-    # i2c device path
-    gsi2c.i2c = I2C("/dev/links/csi0_i2c")
 
-    test_zoom()
+    parser = argparse.ArgumentParser(
+        description="Camera Control Test", prog="zoom_flip_mirror"
+    )
 
-    # test_mirror_flip()
+    parser.add_argument(
+        "-i", "--i2c", default="/dev/links/csi0_i2c", help="i2c device path"
+    )
+
+    parser.add_argument("-z", "--zoomtest", type=bool, default=False, help="Zoom Test")
+    parser.add_argument(
+        "-m", "--mirrortest", type=bool, default=False, help="Mirror / Flip Test"
+    )
+
+    parser.add_argument(
+        "-s", "--speedtest", type=bool, default=False, help="Zoom Speed Test"
+    )
+
+    args = parser.parse_args()
+
+    # i2c device init
+    gsi2c.i2c = I2C(args.i2c)
+
+    if args.zoomtest:
+        test_zoom()
+    elif args.mirrortest:
+        test_mirror_flip()
+    elif args.speedtest:
+        test_zoom_speed()
