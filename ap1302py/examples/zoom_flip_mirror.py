@@ -149,15 +149,15 @@ def set_tilt(val):
 def get_mirror_flip():
     """
     0 = Normal
-    1 = Flip vertical
-    2 = Mirror horizontal
-    3 = Flip vertical flip and mirror horizontal
+    1 = Mirror horizontal
+    2 = Flip vertical
+    3 = Flip vertical and mirror horizontal
 
     return mirror, flip
     """
     val = gsi2c.read8(0x1F)
-    mirror = val >= 2
-    flip = (val == 1) or (val == 3)
+    flip = (val >= 2)
+    mirror = (val == 1) or (val == 3)
     return mirror, flip
 
 
@@ -171,7 +171,7 @@ def set_mirror(mode):
     # Get current mode
     mirror, flip = get_mirror_flip()
     if mirror != mode:
-        gsi2c.write8(0x1F, flip + mode * 2)  # mirror bit[1] / flip bit[0]
+        gsi2c.write8(0x1F, mode + flip * 2)  # mirror bit[0] / flip bit[1]
 
 
 def set_flip(mode):
@@ -184,7 +184,7 @@ def set_flip(mode):
     # Get current mode
     mirror, flip = get_mirror_flip()
     if flip != mode:
-        gsi2c.write8(0x1F, mode + mirror * 2)  # mirror bit[1] / flip bit[0]
+        gsi2c.write8(0x1F, mirror + mode * 2)  # mirror bit[0] / flip bit[1]
 
 
 def reset_mirror_flip():
@@ -260,6 +260,45 @@ def test_zoom_pan_tilt():
 
     set_zoom(1.0)
     
+# Test zoom + pan + mirror.
+def test_zoom_pan_mirror():
+    reset_zoom()
+    reset_mirror_flip()
+    
+    set_zoom(2.0)
+    set_zoom_speed(10)
+    mirror, flip = get_mirror_flip()
+    print(f"Pan = {get_pan()}, Mirror = {mirror}")
+
+    set_pan(40)
+    time.sleep(2)
+    set_mirror(1)
+    mirror, flip = get_mirror_flip()
+    print(f"Pan = {get_pan()}, Mirror = {mirror}")
+
+    time.sleep(2)
+    reset_mirror_flip()
+
+
+# Test zoom + tilt + flip.
+def test_zoom_tilt_flip():
+    reset_zoom()
+    reset_mirror_flip()
+    
+    set_zoom(2.0)
+    set_zoom_speed(10)
+    mirror, flip = get_mirror_flip()
+    print(f"Tilt = {get_tilt()}, Mirror = {mirror}, Flip = {flip}")
+
+    set_tilt(40)
+    time.sleep(2)
+    set_flip(1)
+    mirror, flip = get_mirror_flip()
+    print(f"Tilt = {get_tilt()}, Mirror = {mirror}, Flip = {flip}")
+
+    time.sleep(2)
+    reset_mirror_flip()
+
 
 # Test mirror and flip.
 def test_mirror_flip():
@@ -269,13 +308,23 @@ def test_mirror_flip():
     print("Flip = ", flip)
 
     set_mirror(1)
+    mirror, flip = get_mirror_flip()
+    print("Mirror = ", mirror)
     time.sleep(1)
+
     set_mirror(0)
+    mirror, flip = get_mirror_flip()
+    print("Mirror = ", mirror)
     time.sleep(1)
 
     set_flip(1)
+    mirror, flip = get_mirror_flip()
+    print("Flip = ", flip)
     time.sleep(1)
+
     set_flip(0)
+    mirror, flip = get_mirror_flip()
+    print("Flip = ", flip)
     time.sleep(1)
 
     reset_mirror_flip()
@@ -313,6 +362,13 @@ if __name__ == "__main__":
         "-p", "--pantest", type=bool, default=False, help="Zoom Pan and Tilt Test"
     )
 
+    parser.add_argument(
+        "-r", "--panmirror", type=bool, default=False, help="Zoom Pan and Mirror Test"
+    )
+    parser.add_argument(
+        "-t", "--tiltflip", type=bool, default=False, help="Zoom Tilt and Flip Test"
+    )
+
     args = parser.parse_args()
 
     # i2c device init
@@ -326,3 +382,7 @@ if __name__ == "__main__":
         test_zoom_speed()
     elif args.pantest:
         test_zoom_pan_tilt()
+    elif args.panmirror:
+        test_zoom_pan_mirror()
+    elif args.tiltflip:
+        test_zoom_tilt_flip()
