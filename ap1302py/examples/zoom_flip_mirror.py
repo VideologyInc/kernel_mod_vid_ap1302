@@ -72,6 +72,10 @@ def reset_zoom():
     gsi2c.write16(0x18, 0x0100)
     # Also reset zoom speed.
     gsi2c.write8(0x1C, 0x80)
+    # as well as pan and tilt
+    gsi2c.write8(0x1D, 0x40)
+    gsi2c.write8(0x1E, 0x40)
+    
 
 
 # Set / Get zoom speed, effective when zoom-in or zoom-out.
@@ -230,6 +234,33 @@ def test_zoom_speed():
     print("Zoom = ", get_zoom(), ", Zoom Speed = ", get_zoom_speed())
 
 
+# Test zoom + pan or tilt.
+def test_zoom_pan_tilt():
+    reset_zoom()
+    
+    set_zoom(2.0)
+    set_zoom_speed(10)
+    print(f"Pan = {get_pan()}, Tilt = {get_tilt()}")
+
+    set_pan(-10)
+    time.sleep(2)
+    print(f"Pan = {get_pan()}, Tilt = {get_tilt()}")
+    
+    set_pan(20)
+    time.sleep(2)
+    print(f"Pan = {get_pan()}, Tilt = {get_tilt()}")
+    
+    set_tilt(-30)
+    time.sleep(2)
+    print(f"Pan = {get_pan()}, Tilt = {get_tilt()}")
+    
+    set_tilt(40)
+    time.sleep(2)
+    print(f"Pan = {get_pan()}, Tilt = {get_tilt()}")
+
+    set_zoom(1.0)
+    
+
 # Test mirror and flip.
 def test_mirror_flip():
 
@@ -278,6 +309,10 @@ if __name__ == "__main__":
         "-s", "--speedtest", type=bool, default=False, help="Zoom Speed Test"
     )
 
+    parser.add_argument(
+        "-p", "--pantest", type=bool, default=False, help="Zoom Pan and Tilt Test"
+    )
+
     args = parser.parse_args()
 
     # i2c device init
@@ -289,3 +324,5 @@ if __name__ == "__main__":
         test_mirror_flip()
     elif args.speedtest:
         test_zoom_speed()
+    elif args.pantest:
+        test_zoom_pan_tilt()
