@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-2.0-or-later
 
+from periphery import I2C
 from time import sleep
-from ..  import gsi2c
+from ap1302py import gsi2c
 
 
 def main():
@@ -33,9 +34,9 @@ def main():
     print(gsi2c.read_serial())
     print(gsi2c.read_nvm(gsi2c.NVM_USER_REG, 0, 16))
 
-def main():
-    print()
 
 if __name__ == "__main__":
+    # i2c device path
+    gsi2c.i2c = I2C("/dev/links/csi0_i2c")
     main()
 
