@@ -166,7 +166,8 @@ static int gs_ar0234_g_volatile_ctrl(struct v4l2_ctrl *ctrl)
 			ret = gs_ar0234_read_reg16(sensor, GS_REG_BRIGHTNESS, &shortval);
 			if (ret < 0)
 				return ret;
-			sensor->ctrls.brightness->val = shortval;
+			// Must convert u16 [0, 65535] to s16 [-32768, 32767] because brightness range is [-4096, 4096] ;-)
+			sensor->ctrls.brightness->val = (int16_t)shortval;
 			break;
 
 		default:
@@ -565,7 +566,10 @@ static int gs_ar0234_i_cntrl(struct gs_ar0234_dev *sensor)
 
 	dev_dbg(sensor->dev, "%s: \n", __func__);
 
-	ret = gs_ar0234_read_reg16(sensor, GS_REG_BRIGHTNESS, (short *) &sensor->ctrls.brightness->cur.val);
+	ret = gs_ar0234_read_reg16(sensor, GS_REG_BRIGHTNESS, &(val_t.uval));
+	// cur.val and .val are both s32 type. Need to be careful reading u16 register into it ;-) 
+	sensor->ctrls.brightness->cur.val = val_t.sval;
+
 	if (ret < 0) return ret;
 
 	ret = gs_ar0234_read_reg16(sensor, GS_REG_CONTRAST, (short *)&sensor->ctrls.contrast->cur.val);
