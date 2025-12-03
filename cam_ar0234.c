@@ -72,6 +72,8 @@ static int gs_print_params(void)
 
 
 static int gs_ar0234_i_cntrl(struct gs_ar0234_dev *sensor);
+static void gs_ar0234_reapply_wb_and_colorfx(struct gs_ar0234_dev *sensor);
+
 
 static inline struct gs_ar0234_dev *to_gs_ar0234_dev(struct v4l2_subdev *sd)
 {
@@ -528,6 +530,8 @@ static int gs_ar0234_s_ctrl(struct v4l2_ctrl *ctrl)
 		if(ret) break;
 		dev_dbg_ratelimited(sd->dev, "%s: set restore registers\n", __func__);
 		ret = gs_ar0234_i_cntrl(sensor);
+		if (!ret)
+			gs_ar0234_reapply_wb_and_colorfx(sensor);
 		break;
 	case V4L2_CID_RESTORE_FACTORY:
 		ret = gs_ar0234_write_reg8(sensor, GS_REG_SAVE_RESTART, 0x07);
@@ -540,6 +544,8 @@ static int gs_ar0234_s_ctrl(struct v4l2_ctrl *ctrl)
 		if(ret) break;
 		dev_dbg_ratelimited(sd->dev, "%s: set restore factory\n", __func__);
 		ret = gs_ar0234_i_cntrl(sensor);
+		if (!ret)
+			gs_ar0234_reapply_wb_and_colorfx(sensor);
 		break;
 	case V4L2_CID_REBOOT:
 		ret = gs_ar0234_write_reg8(sensor, GS_REG_SAVE_RESTART, 0x99);
@@ -551,6 +557,46 @@ static int gs_ar0234_s_ctrl(struct v4l2_ctrl *ctrl)
 	}
 
 	return ret;
+}
+/* Re-apply ISP "sticky" controls (WB / colorfx) even if their logical
+ * values did not change.
+ *
+ * This is used to work around AP1302/AR0234 behaviour where manual
+ * white balance and color effects restored from NVM are not applied
+ * to the image pipeline after reboot or stream restart until the
+ * controls are toggled.
+ */
+static void gs_ar0234_reapply_ctrl(struct v4l2_ctrl *ctrl)
+{
+	int ret;
+	struct v4l2_subdev *sd;
+
+	if (!ctrl)
+		return;
+
+	sd = ctrl_to_sd(ctrl);
+
+	/* ctrl->cur.val is the cached value that should be active.
+	 * Force s_ctrl() to program hardware using this value again.
+	 */
+	ctrl->val = ctrl->cur.val;
+
+	ret = gs_ar0234_s_ctrl(ctrl);
+	if (ret)
+		dev_dbg_ratelimited(sd->dev,
+				    "%s: reapply ctrl 0x%x failed (%d)\n",
+				    __func__, ctrl->id, ret);
+}
+
+static void gs_ar0234_reapply_wb_and_colorfx(struct gs_ar0234_dev *sensor)
+{
+	struct gs_ar0234_ctrls *c = &sensor->ctrls;
+
+	/* Order is important: first WB mode, then preset/temperature. */
+	gs_ar0234_reapply_ctrl(c->auto_wb);
+	gs_ar0234_reapply_ctrl(c->wb_preset);
+	gs_ar0234_reapply_ctrl(c->wb_temp);
+	gs_ar0234_reapply_ctrl(c->colorfx);
 }
 
 static int gs_ar0234_i_cntrl(struct gs_ar0234_dev *sensor)
@@ -1175,9 +1221,18 @@ static int gs_ar0234_init_controls(struct gs_ar0234_dev *sensor)
 
 	/* Auto/manual white balance */
 	ctrls->auto_wb = v4l2_ctrl_new_std(hdl, ops, V4L2_CID_AUTO_WHITE_BALANCE, 0, 1, 1, 1);
+	if (ctrls->auto_wb)
+		ctrls->auto_wb->flags |= V4L2_CTRL_FLAG_EXECUTE_ON_WRITE;
+
 	ctrls->push_to_white = v4l2_ctrl_new_std(hdl, ops, V4L2_CID_DO_WHITE_BALANCE, 0, 0, 0, 0);
+
 	ctrls->wb_temp = v4l2_ctrl_new_std(hdl, ops, V4L2_CID_WHITE_BALANCE_TEMPERATURE , 0, 0xFFFF, 1, 6500);
+	if (ctrls->wb_temp)
+		ctrls->wb_temp->flags |= V4L2_CTRL_FLAG_EXECUTE_ON_WRITE;
+
 	ctrls->wb_preset = v4l2_ctrl_new_std_menu(hdl, ops, V4L2_CID_AUTO_N_PRESET_WHITE_BALANCE, V4L2_WHITE_BALANCE_SHADE, 0x2, V4L2_WHITE_BALANCE_DAYLIGHT);
+	if (ctrls->wb_preset)
+		ctrls->wb_preset->flags |= V4L2_CTRL_FLAG_EXECUTE_ON_WRITE;
 	ctrls->awb_man_x = v4l2_ctrl_new_custom(hdl, &awb_man_x, NULL);
 	ctrls->awb_man_y = v4l2_ctrl_new_custom(hdl, &awb_man_y, NULL);
 
@@ -1242,6 +1297,8 @@ static int gs_ar0234_init_controls(struct gs_ar0234_dev *sensor)
 
 	/* effects */
 	ctrls->colorfx = v4l2_ctrl_new_std_menu(hdl, ops, V4L2_CID_COLORFX, V4L2_COLORFX_SET_CBCR, 0, V4L2_COLORFX_NONE);
+	if (ctrls->colorfx)
+		ctrls->colorfx->flags |= V4L2_CTRL_FLAG_EXECUTE_ON_WRITE;
 
 	if (hdl->error) {
 		ret = hdl->error;
@@ -1443,7 +1500,14 @@ static int gs_ar0234_s_stream(struct v4l2_subdev *sd, int enable)
 #endif
 		// set fr reg- 0x16 (16b = 8b,8b [fraction)]) = 60,50,30,25 or any int
 		gs_ar0234_write_reg16(sensor, GS_REG_FRAMERATE, ((u16)(sensor->framerate) << 8));
-
+		
+		/* Re-apply WB / color effect controls after NVM restore,
+		 * reboot or stream restart. At this point AP1302 has the
+		 * correct register values (either defaults or values
+		 * restored by the MCU/NVM), but the ISP may still be using
+		 * its internal defaults until the controls are toggled.
+		 */
+		gs_ar0234_reapply_wb_and_colorfx(sensor);
 		//turn on mipi
 		gs_ar0234_write_reg8(sensor, GS_REG_SET_STATE, FORMAT_DONE); // format change state Done
 
