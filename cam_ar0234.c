@@ -72,6 +72,9 @@ static int gs_print_params(void)
 
 
 static int gs_ar0234_i_cntrl(struct gs_ar0234_dev *sensor);
+static void gs_ar0234_reapply_ctrl(struct v4l2_ctrl *ctrl);
+static void gs_ar0234_reapply_wb_and_colorfx(struct gs_ar0234_dev *sensor);
+
 
 static inline struct gs_ar0234_dev *to_gs_ar0234_dev(struct v4l2_subdev *sd)
 {
@@ -166,7 +169,8 @@ static int gs_ar0234_g_volatile_ctrl(struct v4l2_ctrl *ctrl)
 			ret = gs_ar0234_read_reg16(sensor, GS_REG_BRIGHTNESS, &shortval);
 			if (ret < 0)
 				return ret;
-			sensor->ctrls.brightness->val = shortval;
+			// Must convert u16 [0, 65535] to s16 [-32768, 32767] because brightness range is [-4096, 4096] ;-)
+			sensor->ctrls.brightness->val = (int16_t)shortval;
 			break;
 
 		default:
@@ -210,6 +214,8 @@ static int gs_ar0234_s_ctrl(struct v4l2_ctrl *ctrl)
 	case V4L2_CID_WHITE_BALANCE_TEMPERATURE:
 		ret = gs_ar0234_write_reg16(sensor, GS_REG_WB_TEMPERATURE, ctrl->val);
 		dev_dbg_ratelimited(sd->dev, "%s: set white balance temperature to %d K\n", __func__, ctrl->val);
+		if (!ret && sensor->ctrls.auto_wb && sensor->ctrls.wb_preset && sensor->ctrls.auto_wb->cur.val == 0 && sensor->ctrls.wb_preset->cur.val != V4L2_WHITE_BALANCE_MANUAL)
+	        gs_ar0234_reapply_ctrl(sensor->ctrls.auto_wb);
 		break;
 	case V4L2_CID_AUTO_N_PRESET_WHITE_BALANCE:
 		if(ctrl->val == V4L2_WHITE_BALANCE_MANUAL)
@@ -527,6 +533,8 @@ static int gs_ar0234_s_ctrl(struct v4l2_ctrl *ctrl)
 		if(ret) break;
 		dev_dbg_ratelimited(sd->dev, "%s: set restore registers\n", __func__);
 		ret = gs_ar0234_i_cntrl(sensor);
+		if (!ret)
+			gs_ar0234_reapply_wb_and_colorfx(sensor);
 		break;
 	case V4L2_CID_RESTORE_FACTORY:
 		ret = gs_ar0234_write_reg8(sensor, GS_REG_SAVE_RESTART, 0x07);
@@ -539,6 +547,8 @@ static int gs_ar0234_s_ctrl(struct v4l2_ctrl *ctrl)
 		if(ret) break;
 		dev_dbg_ratelimited(sd->dev, "%s: set restore factory\n", __func__);
 		ret = gs_ar0234_i_cntrl(sensor);
+		if (!ret)
+			gs_ar0234_reapply_wb_and_colorfx(sensor);
 		break;
 	case V4L2_CID_REBOOT:
 		ret = gs_ar0234_write_reg8(sensor, GS_REG_SAVE_RESTART, 0x99);
@@ -550,6 +560,46 @@ static int gs_ar0234_s_ctrl(struct v4l2_ctrl *ctrl)
 	}
 
 	return ret;
+}
+/* Re-apply ISP "sticky" controls (WB / colorfx) even if their logical
+ * values did not change.
+ *
+ * This is used to work around AP1302/AR0234 behaviour where manual
+ * white balance and color effects restored from NVM are not applied
+ * to the image pipeline after reboot or stream restart until the
+ * controls are toggled.
+ */
+static void gs_ar0234_reapply_ctrl(struct v4l2_ctrl *ctrl)
+{
+	int ret;
+	struct v4l2_subdev *sd;
+
+	if (!ctrl)
+		return;
+
+	sd = ctrl_to_sd(ctrl);
+
+	/* ctrl->cur.val is the cached value that should be active.
+	 * Force s_ctrl() to program hardware using this value again.
+	 */
+	ctrl->val = ctrl->cur.val;
+
+	ret = gs_ar0234_s_ctrl(ctrl);
+	if (ret)
+		dev_dbg_ratelimited(sd->dev,
+				    "%s: reapply ctrl 0x%x failed (%d)\n",
+				    __func__, ctrl->id, ret);
+}
+
+static void gs_ar0234_reapply_wb_and_colorfx(struct gs_ar0234_dev *sensor)
+{
+	struct gs_ar0234_ctrls *c = &sensor->ctrls;
+
+	/* Order is important: first WB mode, then preset/temperature. */
+	gs_ar0234_reapply_ctrl(c->auto_wb);
+	gs_ar0234_reapply_ctrl(c->wb_preset);
+	gs_ar0234_reapply_ctrl(c->wb_temp);
+	gs_ar0234_reapply_ctrl(c->colorfx);
 }
 
 static int gs_ar0234_i_cntrl(struct gs_ar0234_dev *sensor)
@@ -565,7 +615,10 @@ static int gs_ar0234_i_cntrl(struct gs_ar0234_dev *sensor)
 
 	dev_dbg(sensor->dev, "%s: \n", __func__);
 
-	ret = gs_ar0234_read_reg16(sensor, GS_REG_BRIGHTNESS, (short *) &sensor->ctrls.brightness->cur.val);
+	ret = gs_ar0234_read_reg16(sensor, GS_REG_BRIGHTNESS, &(val_t.uval));
+	// cur.val and .val are both s32 type. Need to be careful reading u16 register into it ;-) 
+	sensor->ctrls.brightness->cur.val = val_t.sval;
+
 	if (ret < 0) return ret;
 
 	ret = gs_ar0234_read_reg16(sensor, GS_REG_CONTRAST, (short *)&sensor->ctrls.contrast->cur.val);
@@ -1171,9 +1224,18 @@ static int gs_ar0234_init_controls(struct gs_ar0234_dev *sensor)
 
 	/* Auto/manual white balance */
 	ctrls->auto_wb = v4l2_ctrl_new_std(hdl, ops, V4L2_CID_AUTO_WHITE_BALANCE, 0, 1, 1, 1);
+	if (ctrls->auto_wb)
+		ctrls->auto_wb->flags |= V4L2_CTRL_FLAG_EXECUTE_ON_WRITE;
+
 	ctrls->push_to_white = v4l2_ctrl_new_std(hdl, ops, V4L2_CID_DO_WHITE_BALANCE, 0, 0, 0, 0);
+
 	ctrls->wb_temp = v4l2_ctrl_new_std(hdl, ops, V4L2_CID_WHITE_BALANCE_TEMPERATURE , 0, 0xFFFF, 1, 6500);
+	if (ctrls->wb_temp)
+		ctrls->wb_temp->flags |= V4L2_CTRL_FLAG_EXECUTE_ON_WRITE;
+
 	ctrls->wb_preset = v4l2_ctrl_new_std_menu(hdl, ops, V4L2_CID_AUTO_N_PRESET_WHITE_BALANCE, V4L2_WHITE_BALANCE_SHADE, 0x2, V4L2_WHITE_BALANCE_DAYLIGHT);
+	if (ctrls->wb_preset)
+		ctrls->wb_preset->flags |= V4L2_CTRL_FLAG_EXECUTE_ON_WRITE;
 	ctrls->awb_man_x = v4l2_ctrl_new_custom(hdl, &awb_man_x, NULL);
 	ctrls->awb_man_y = v4l2_ctrl_new_custom(hdl, &awb_man_y, NULL);
 
@@ -1238,6 +1300,8 @@ static int gs_ar0234_init_controls(struct gs_ar0234_dev *sensor)
 
 	/* effects */
 	ctrls->colorfx = v4l2_ctrl_new_std_menu(hdl, ops, V4L2_CID_COLORFX, V4L2_COLORFX_SET_CBCR, 0, V4L2_COLORFX_NONE);
+	if (ctrls->colorfx)
+		ctrls->colorfx->flags |= V4L2_CTRL_FLAG_EXECUTE_ON_WRITE;
 
 	if (hdl->error) {
 		ret = hdl->error;
@@ -1439,7 +1503,14 @@ static int gs_ar0234_s_stream(struct v4l2_subdev *sd, int enable)
 #endif
 		// set fr reg- 0x16 (16b = 8b,8b [fraction)]) = 60,50,30,25 or any int
 		gs_ar0234_write_reg16(sensor, GS_REG_FRAMERATE, ((u16)(sensor->framerate) << 8));
-
+		
+		/* Re-apply WB / color effect controls after NVM restore,
+		 * reboot or stream restart. At this point AP1302 has the
+		 * correct register values (either defaults or values
+		 * restored by the MCU/NVM), but the ISP may still be using
+		 * its internal defaults until the controls are toggled.
+		 */
+		gs_ar0234_reapply_wb_and_colorfx(sensor);
 		//turn on mipi
 		gs_ar0234_write_reg8(sensor, GS_REG_SET_STATE, FORMAT_DONE); // format change state Done
 
@@ -1661,8 +1732,6 @@ static void gs_ar0234_fw_handler(const struct firmware *fw, void *context)
 }
 
 
-
-
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 3, 0)
 static int gs_ar0234_probe(struct i2c_client *client)
 #else
@@ -1822,7 +1891,7 @@ static int gs_ar0234_probe(struct i2c_client *client, const struct i2c_device_id
 	ret = v4l2_async_register_subdev_sensor(&sensor->sd);
 	if (ret)
 		goto free_ctrls;
-
+	
 	if(update == false) // if firmware update was performed dont do this
 	{
 		// read register values from Sensor
