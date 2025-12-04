@@ -214,8 +214,8 @@ static int gs_ar0234_s_ctrl(struct v4l2_ctrl *ctrl)
 	case V4L2_CID_WHITE_BALANCE_TEMPERATURE:
 		ret = gs_ar0234_write_reg16(sensor, GS_REG_WB_TEMPERATURE, ctrl->val);
 		dev_dbg_ratelimited(sd->dev, "%s: set white balance temperature to %d K\n", __func__, ctrl->val);
-		if (!ret && sensor->ctrls.auto_wb && sensor->ctrls.auto_wb->cur.val == 0)
-			gs_ar0234_reapply_ctrl(sensor->ctrls.auto_wb);
+		if (!ret && sensor->ctrls.auto_wb && sensor->ctrls.wb_preset && sensor->ctrls.auto_wb->cur.val == 0 && sensor->ctrls.wb_preset->cur.val != V4L2_WHITE_BALANCE_MANUAL)
+	        gs_ar0234_reapply_ctrl(sensor->ctrls.auto_wb);
 		break;
 	case V4L2_CID_AUTO_N_PRESET_WHITE_BALANCE:
 		if(ctrl->val == V4L2_WHITE_BALANCE_MANUAL)
