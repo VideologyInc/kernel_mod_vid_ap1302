@@ -1728,25 +1728,6 @@ static void gs_ar0234_fw_handler(const struct firmware *fw, void *context)
 	mutex_unlock(&sensor->probe_lock);
 }
 
-// Do this after camera boots and ctrls initialized.
-static void correct_wb_mode(struct gs_ar0234_dev *sensor)
-{
-	// read auto wb mode
-	int ret = 0;
-	u8 uval8;
-	ret = gs_ar0234_read_reg8(sensor, GS_REG_WHITEBALANCE, &uval8);
-	if (ret < 0) return;
-	bool auto_wb = (uval8 & 0x0F) == 0x0F ? 1 : 0;
-	// switch auto wb on and off to fix the auto wb off temperature values not effective bug.
-	if (!auto_wb)
-	{
-		// ON
-		ret = gs_ar0234_write_reg8(sensor, GS_REG_WHITEBALANCE, 0xF); // only OFF and ON
-		// OFF
-		ret = gs_ar0234_write_reg8(sensor, GS_REG_WHITEBALANCE, 0x7); // only OFF and ON
-	}
-}
-
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 3, 0)
 static int gs_ar0234_probe(struct i2c_client *client)
@@ -1907,9 +1888,6 @@ static int gs_ar0234_probe(struct i2c_client *client, const struct i2c_device_id
 	ret = v4l2_async_register_subdev_sensor(&sensor->sd);
 	if (ret)
 		goto free_ctrls;
-
-	// Correct wb mode.
-	correct_wb_mode(sensor);
 	
 	if(update == false) // if firmware update was performed dont do this
 	{
