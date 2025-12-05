@@ -527,11 +527,22 @@ static int gs_ar0234_s_ctrl(struct v4l2_ctrl *ctrl)
 		break;
 	case V4L2_CID_RESTORE_REGISTERS:
 		ret = gs_ar0234_write_reg8(sensor, GS_REG_SAVE_RESTART, 0x05);
-		if(ret) break;
-		//msleep(2000); //wait 2000 ms for recovery of factory registers
-		ret = gs_check_wait(sensor, 50, 1000); // wait
-		if(ret) break;
-		dev_dbg_ratelimited(sd->dev, "%s: set restore registers\n", __func__);
+		if (ret)
+			break;
+
+		ret = gs_check_wait(sensor, 50, 1000); // wait for NVM recall
+		if (ret)
+			break;
+
+		ret = gs_ar0234_write_reg8(sensor, GS_REG_SAVE_RESTART, 0x08);
+		if (ret)
+			break;
+
+		ret = gs_check_wait(sensor, 50, 1000); // wait for restart to complete
+		if (ret)
+			break;
+
+		dev_dbg_ratelimited(sd->dev, "%s: restore registers from NVM\n", __func__);
 		ret = gs_ar0234_i_cntrl(sensor);
 		if (!ret)
 			gs_ar0234_reapply_wb_and_colorfx(sensor);
