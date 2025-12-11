@@ -35,7 +35,7 @@
 #define ISP_FIRMWARE_VERSION 443
 
 // MCU firmware contains both mcu and nvm in a single image therefore it has two version numbers.
-#define MCU_FIRMWARE_NAME "SFT-23361_mcu_0.30_0.1.img"   				// trigger on gpio 8
+#define MCU_FIRMWARE_NAME "SFT-23361_mcu_0.31_0.1.img"   				// trigger on gpio 8
 //#define MCU_FIRMWARE_NAME "SFT-23361_mcu_0.30_0.2.img" 				// trigger on gpio 7
 
 #define NVM_FIRMWARE_NAME "SFT-23363_nvm_0.1.img" 						// trigger on gpio 8
