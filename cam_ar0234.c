@@ -29,13 +29,13 @@
 #include "gs_ap1302.h"
 #include "gs_image_update.h"
 
-#define MCU_FIRMWARE_VERSION 0x001E // version = 0.30
+#define MCU_FIRMWARE_VERSION 0x0025 // version = 0.37
 #define NVM_FIRMWARE_VERSION 0x0001 // version = 0.1 (un-even version for GPIO 8)
 //#define NVM_FIRMWARE_VERSION 0x0002 // version = 0.2 (even version for GPIO 7)
 #define ISP_FIRMWARE_VERSION 443
 
 // MCU firmware contains both mcu and nvm in a single image therefore it has two version numbers.
-#define MCU_FIRMWARE_NAME "SFT-23361_mcu_0.31_0.1.img"   				// trigger on gpio 8
+#define MCU_FIRMWARE_NAME "SFT-23361_mcu_0.37_0.1.img"   				// trigger on gpio 8
 //#define MCU_FIRMWARE_NAME "SFT-23361_mcu_0.30_0.2.img" 				// trigger on gpio 7
 
 #define NVM_FIRMWARE_NAME "SFT-23363_nvm_0.1.img" 						// trigger on gpio 8
@@ -527,11 +527,13 @@ static int gs_ar0234_s_ctrl(struct v4l2_ctrl *ctrl)
 		break;
 	case V4L2_CID_RESTORE_REGISTERS:
 		ret = gs_ar0234_write_reg8(sensor, GS_REG_SAVE_RESTART, 0x05);
-		if (!ret) {
+		if(ret) break;
+		ret = gs_check_wait(sensor, 50, 1000); // wait
+		if(ret) break;
         ret = gs_ar0234_i_cntrl(sensor);
-        if (!ret)
-            gs_ar0234_reapply_wb_and_colorfx(sensor);
-    	}
+        if(ret) break;
+        gs_ar0234_reapply_wb_and_colorfx(sensor);
+    	
 		break;
 	case V4L2_CID_RESTORE_FACTORY:
 		ret = gs_ar0234_write_reg8(sensor, GS_REG_SAVE_RESTART, 0x07);
