@@ -19,27 +19,29 @@ Note: this module is valid only for Linux kernels > 5.12
 
 #### 2. Check out this repository on Scailx camera.
 
-#### 3. cd to local folder on camera, and build + install module.
+#### 3. export CROSS_COMPILE=/usr/bin/aarch64-poky-linux-
+
+#### 4. cd to local folder on camera, and build + install module.
 ####	`make` and `make modules_install`
 
-#### 4. Check module is loaded `lsmod`.
+#### 5. Check module is loaded `lsmod`.
 
-#### 5. Check newly built module is in correct place.
+#### 6. Check newly built module is in correct place.
 ####	'ls -lt /lib/modules/6*/updates*/vid_isp_ar0234.ko`
 
-#### 6.	Reboot camera and run `dmesg` to see new messages you add to the C codes ;-)
+#### 7.	Reboot camera and run `dmesg` to see new messages you add to the C codes ;-)
 
 ===========================================================================
 
-#### 7. To test python program to do vptz commands, go to ~/ap1302py/examples folder
+#### 8. To test python program to do vptz commands, go to ~/ap1302py/examples folder
 ####	`cd /root/kernel_mod_vid_ap1302/ap1302py/examples`
 
-#### 8. On Windows, run VLC Player with correct camera stream path
+#### 9. On Windows, run VLC Player with correct camera stream path
 ####	rtsp://scailx-ai.local:8554/cam0-gs-AR0234_1080p
 
 ####	Here scailx-ai.local is the Scailx camera's host name. Make sure it matches your camera host name or just use the IP address instead.
 
-#### 9.	Now on camera console, run python program zoom_flip_mirror.py to see camera stream effect on VLC player, for examples
+#### 10.	Now on camera console, run python program zoom_flip_mirror.py to see camera stream effect on VLC player, for examples
 
 ####	`python3 zoom_flip_mirror.py -h`	to show help
 ####	`python3 zoom_flip_mirror.py -z 1`  to see zoom-in test on VLC player.
